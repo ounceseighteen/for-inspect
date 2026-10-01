@@ -1,0 +1,77 @@
+/* ─── ГЛАВНАЯ ─── */
+.main { flex: 1; padding: 2.5rem 0; }
+
+.hero {
+    text-align: center;
+    padding: 3rem 0 2rem;
+}
+
+.hero__title {
+    font-size: 2.4rem;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+}
+
+.hero__sub {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+}
+
+/* ─── СЕКЦИИ ─── */
+.section { margin-bottom: 3rem; }
+
+.section__title {
+    font-size: 1.2rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1.2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+/* ─── СЕГОДНЯ В КИНО ─── */
+.today-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.today-card {
+    display: grid;
+    grid-template-columns: 70px 1fr 160px 90px;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem 1.2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.today-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.today-card__time {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.today-card__title { font-size: 1rem; }
+
+.today-card__hall {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.today-card__price {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    text-align: right;
+}

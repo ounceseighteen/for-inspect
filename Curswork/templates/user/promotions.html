@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}Акции — Мир Кино{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-top:1.5rem; margin-bottom:1rem;">
+    <h1 style="font-size:2rem; font-weight:700; margin:0;">Акции</h1>
+</div>
+
+<div style="display:flex; flex-direction:column; gap:1.5rem; margin-top:0;">
+    {% for p in promos %}
+    {% set odd = loop.index % 2 == 1 %}
+    <div style="display:flex; flex-direction:{{ 'row' if odd else 'row-reverse' }}; background:var(--bg-card); border:1px solid var(--border);
+                border-radius:var(--radius); overflow:hidden; min-height:180px;">
+
+        <!-- Картинка -->
+        {% if p.image %}
+        <div style="width:280px; flex-shrink:0;">
+            <img src="{{ url_for('static', filename='promotions/' + p.image) }}"
+                 alt="{{ p.title }}"
+                 style="width:100%; height:100%; object-fit:cover;">
+        </div>
+        {% else %}
+        <div style="width:280px; flex-shrink:0; background:var(--bg);
+                    display:flex; align-items:center; justify-content:center;">
+            <span style="font-size:3rem; color:var(--accent);"></span>
+        </div>
+        {% endif %}
+
+        <!-- Текст -->
+        <div style="flex:1; padding:1.5rem; display:flex; flex-direction:column; justify-content:center;">
+            <div style="display:flex; align-items:center; gap:0.8rem; margin-bottom:0.7rem;">
+                <h2 style="font-size:1.2rem; font-weight:700; margin:0;">{{ p.title }}</h2>
+                {% if p.discount %}
+                <span style="background:var(--accent); color:var(--bg); font-weight:700;
+                             font-size:0.85rem; padding:3px 10px; border-radius:20px;">
+                    −{{ p.discount }}%
+                </span>
+                {% endif %}
+            </div>
+            <p style="color:var(--text-muted); font-size:0.9rem; line-height:1.6; margin:0;">
+                {{ p.description }}
+            </p>
+        </div>
+    </div>
+    {% else %}
+    <p style="text-align:center; color:var(--text-muted); padding:3rem 0;">Акций пока нет</p>
+    {% endfor %}
+</div>
+
+<!-- Модалка подробнее -->
+<div id="promoDetailModal" class="settings-overlay" style="display:none;" onclick="closePromoDetail(event)">
+    <div class="settings-modal" style="width:600px; max-height:90vh; overflow-y:auto;">
+        <button class="settings-modal__close" onclick="closePromoDetail()">&times;</button>
+        <div id="promoDetailImg" style="width:100%; max-height:300px; overflow:hidden; border-radius:var(--radius); margin-bottom:1rem; display:none;">
+            <img id="promoDetailImgSrc" src="" alt="" style="width:100%; object-fit:cover;">
+        </div>
+        <div style="display:flex; align-items:center; gap:0.8rem; margin-bottom:0.8rem;">
+            <h2 id="promoDetailTitle" style="font-size:1.3rem; font-weight:700; margin:0;"></h2>
+            <span id="promoDetailDiscount" style="background:var(--accent); color:var(--bg); font-weight:700;
+                         font-size:0.85rem; padding:3px 10px; border-radius:20px; display:none;"></span>
+        </div>
+        <p id="promoDetailDesc" style="color:var(--text-muted); line-height:1.7; font-size:0.95rem;"></p>
+    </div>
+</div>
+
+<script>
+const promosData = {
+    {% for p in promos %}
+    {{ p.id }}: {
+        title: {{ p.title|tojson }},
+        description: {{ p.description|tojson if p.description else '""' }},
+        discount: {{ p.discount or 0 }},
+        image: {{ ('"/static/promotions/' + p.image + '"') if p.image else 'null' }}
+    },
+    {% endfor %}
+};
+
+function openPromoDetail(id) {
+    const p = promosData[id];
+    if (!p) return;
+    document.getElementById('promoDetailTitle').textContent = p.title;
+    document.getElementById('promoDetailDesc').textContent = p.description;
+    const disc = document.getElementById('promoDetailDiscount');
+    if (p.discount) {
+        disc.textContent = '−' + p.discount + '%';
+        disc.style.display = 'inline-block';
+    } else {
+        disc.style.display = 'none';
+    }
+    const imgBlock = document.getElementById('promoDetailImg');
+    if (p.image) {
+        document.getElementById('promoDetailImgSrc').src = p.image;
+        imgBlock.style.display = 'block';
+    } else {
+        imgBlock.style.display = 'none';
+    }
+    document.getElementById('promoDetailModal').style.display = 'flex';
+}
+
+function closePromoDetail(e) {
+    if (!e || e.target === document.getElementById('promoDetailModal'))
+        document.getElementById('promoDetailModal').style.display = 'none';
+}
+</script>
+{% endblock %}

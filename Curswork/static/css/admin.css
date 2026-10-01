@@ -1,0 +1,268 @@
+/* ─── АДМИН-ПАНЕЛЬ ─── */
+.admin-body { font-family: 'Georgia', serif; }
+
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: var(--sidebar-w);
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+}
+
+.sidebar__brand {
+    padding: 1.5rem 1.2rem;
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sidebar__nav {
+    flex: 1;
+    padding: 1rem 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar__link {
+    padding: 0.7rem 1.2rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+}
+
+.sidebar__link:hover {
+    color: var(--text);
+    background: var(--bg-card-hover);
+    border-left-color: var(--accent);
+}
+
+.sidebar__footer {
+    padding: 1rem 1.2rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.admin-content {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg);
+}
+
+.admin-content__inner {
+    padding: 2rem;
+    max-width: 1000px;
+}
+
+.admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.stat-card__num {
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+
+.stat-card__label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.admin-quick {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.admin-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.admin-table th {
+    background: var(--bg-card);
+    padding: 0.8rem 1rem;
+    text-align: left;
+    color: var(--text-muted);
+    font-weight: normal;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    text-align: center;
+}
+
+.admin-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+    text-align: center;
+}
+
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr:hover td { background: var(--bg-card); }
+
+.td-actions { display: flex; gap: 0.4rem; }
+
+.filter-bar {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.filter-bar .form-group { margin-bottom: 0; }
+
+/* ─── ТАБЛИЦА СЕАНСОВ ─── */
+/* Обрезка текста в select */
+#tab-sessions .admin-table select {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Фиксированная таблица сеансов */
+#tab-sessions .admin-table {
+    table-layout: fixed;
+    width: 100%;
+}
+#tab-sessions .admin-table th:nth-child(1),
+#tab-sessions .admin-table td:nth-child(1) { width: 19%; }
+#tab-sessions .admin-table th:nth-child(2),
+#tab-sessions .admin-table td:nth-child(2) { width: 16%; }
+#tab-sessions .admin-table th:nth-child(3),
+#tab-sessions .admin-table td:nth-child(3) { width: 13%; }
+#tab-sessions .admin-table th:nth-child(4),
+#tab-sessions .admin-table td:nth-child(4) { width: 12%; }
+#tab-sessions .admin-table th:nth-child(5),
+#tab-sessions .admin-table td:nth-child(5) { width: 8%; }
+#tab-sessions .admin-table th:nth-child(6),
+#tab-sessions .admin-table td:nth-child(6) { width: 12%; }
+#tab-sessions .admin-table th:nth-child(7),
+#tab-sessions .admin-table td:nth-child(7) { width: 10%; }
+
+#tab-sessions .admin-table td input,
+#tab-sessions .admin-table td select {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ─── БИЛЕТЫ / БРОНИРОВАНИЯ ─── */
+#tab-tickets .admin-table-wrap {
+    overflow-x: auto;
+}
+
+#tab-tickets .admin-table {
+    min-width: 1150px;
+}
+
+/* ─── ФИКСЫ АКЦЕНТА И ТАБЛИЦЫ БИЛЕТОВ ─── */
+/* Старые желтые inline-подсветки перебиваются новым акцентом */
+#pickerDates button[style*="rgb(255, 180, 0)"],
+#pickerDates button[style*="255, 180, 0"],
+#cfDates button[style*="rgb(255, 180, 0)"],
+#cfDates button[style*="255, 180, 0"] {
+    background: rgba(124, 92, 255, 0.12) !important;
+    border-color: var(--accent) !important;
+}
+
+/* Таблица билетов — по ширине и аккуратности как Сеансы */
+#tab-bookings .admin-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+#tab-bookings .admin-table th,
+#tab-bookings .admin-table td {
+    padding: 0.75rem 0.65rem;
+    line-height: 1.45;
+    word-break: normal;
+    overflow-wrap: anywhere;
+}
+
+#tab-bookings .admin-table th:nth-child(1),
+#tab-bookings .admin-table td:nth-child(1) { width: 7%; }
+#tab-bookings .admin-table th:nth-child(2),
+#tab-bookings .admin-table td:nth-child(2) { width: 17%; }
+#tab-bookings .admin-table th:nth-child(3),
+#tab-bookings .admin-table td:nth-child(3) { width: 15%; }
+#tab-bookings .admin-table th:nth-child(4),
+#tab-bookings .admin-table td:nth-child(4) { width: 10%; }
+#tab-bookings .admin-table th:nth-child(5),
+#tab-bookings .admin-table td:nth-child(5) { width: 8%; }
+#tab-bookings .admin-table th:nth-child(6),
+#tab-bookings .admin-table td:nth-child(6) { width: 12%; }
+#tab-bookings .admin-table th:nth-child(7),
+#tab-bookings .admin-table td:nth-child(7) { width: 10%; }
+#tab-bookings .admin-table th:nth-child(8),
+#tab-bookings .admin-table td:nth-child(8) { width: 10%; }
+#tab-bookings .admin-table th:nth-child(9),
+#tab-bookings .admin-table td:nth-child(9) { width: 11%; }
+
+#tab-bookings .admin-table th:last-child,
+#tab-bookings .admin-table td:last-child {
+    white-space: nowrap;
+    overflow-wrap: normal;
+}
+
+#tab-bookings .booking-seat-cell {
+    white-space: normal;
+    line-height: 1.45;
+}
+
+#tab-bookings #bookingSearchInput {
+    margin-bottom: 0.5rem;
+}

@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Фильмы — Мир Кино{% endblock %}
+
+{% block admin_content %}
+<div style="margin-bottom:1.5rem;">
+    <h1 style="font-size:1.6rem; font-weight:800; margin-bottom:0.35rem;">Фильмы</h1>
+    <p style="color:var(--text-muted); font-size:0.9rem;">Полное редактирование доступно во вкладке «Фильмы» личного кабинета.</p>
+    <a href="{{ url_for('personal') + '?tab=films' }}" class="btn btn--outline btn--sm">Открыть редактор</a>
+</div>
+
+<div style="display:flex; gap:40px; align-items:flex-start;">
+    <!-- Список фильмов -->
+    <div style="flex:2; min-width:0;">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Афиша</th>
+                    <th>Название</th>
+                    <th>Жанр</th>
+                    <th>Длит.</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in films %}
+                <tr>
+                    <td>
+                        {% if f.poster %}
+                        <img src="{{ url_for('static', filename='posters/' + f.poster) }}" alt=""
+                             style="width:48px; aspect-ratio:2/3; object-fit:cover; border-radius:var(--radius-sm);">
+                        {% else %}
+                        <div style="width:48px; aspect-ratio:2/3; background:var(--bg); border-radius:var(--radius-sm);
+                                    display:flex; align-items:center; justify-content:center; font-size:1rem; font-weight:700; color:var(--accent);">{{ f.title[0]|upper }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ f.title }}</td>
+                    <td>{{ f.genre or '—' }}</td>
+                    <td>{{ f.duration or '—' }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('admin_film_delete', film_id=f.id) }}" style="display:inline;"
+                              onsubmit="return confirm('Удалить фильм?')">
+                            <button type="submit" class="btn btn--danger btn--icon" title="Удалить">🗑️</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">Фильмов пока нет</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Форма добавления -->
+    <div style="flex:1; min-width:260px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+        <h2 style="font-size:1.05rem; font-weight:700; margin-bottom:1rem;">Добавить фильм</h2>
+        <form method="post" action="{{ url_for('admin_film_add') }}" enctype="multipart/form-data">
+            <input type="text" class="form-input" name="title" placeholder="Название" required style="margin-bottom:0.5rem;">
+            <select class="form-input" name="genre" style="margin-bottom:0.5rem;">
+                {% set genres = ['Драма', 'Комедия', 'Фантастика', 'Приключения', 'Боевик', 'Триллер', 'Ужасы', 'Мелодрама', 'Мультфильмы', 'Семейный', 'Документальный', 'Фэнтези', 'Спорт'] %}
+                {% for g in genres %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+            </select>
+            <input type="number" class="form-input" name="duration" placeholder="Длительность (мин.)" required min="1" style="margin-bottom:0.5rem;">
+            <textarea class="form-input" name="description" rows="3" placeholder="Описание" style="resize:vertical; margin-bottom:0.5rem;"></textarea>
+            <input type="file" class="form-input" name="poster" accept="image/*">
+            <button type="submit" class="btn btn--primary btn--full" style="margin-top:0.7rem;">Добавить</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Залы — Мир Кино{% endblock %}
+
+{% block admin_content %}
+<div style="margin-bottom:1.5rem;">
+    <h1 style="font-size:1.6rem; font-weight:800; margin-bottom:0.35rem;">Залы</h1>
+    <p style="color:var(--text-muted); font-size:0.9rem;">Полное редактирование вместимости и статуса — во вкладке «Залы» личного кабинета.</p>
+    <a href="{{ url_for('personal') + '?tab=halls' }}" class="btn btn--outline btn--sm">Открыть редактор</a>
+</div>
+
+<div style="display:flex; gap:40px; align-items:flex-start;">
+    <!-- Список залов -->
+    <div style="flex:2; min-width:0;">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Вместимость</th>
+                    <th>Ряды × мест</th>
+                    <th>Формат</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in halls %}
+                <tr>
+                    <td>{{ h.name }}</td>
+                    <td>{{ h.capacity }}</td>
+                    <td>{{ h.rows }} × {{ h.seats_per_row }}</td>
+                    <td>{{ h.format }}</td>
+                    <td>
+                        {% if h.status == 'closed' %}
+                        <span style="color:var(--danger);">Закрыт</span>
+                        {% else %}
+                        <span style="color:var(--success);">Открыт</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="post" action="{{ url_for('admin_hall_delete', hall_id=h.id) }}" style="display:inline;"
+                              onsubmit="return confirm('Удалить зал и все его места?')">
+                            <button type="submit" class="btn btn--danger btn--icon" title="Удалить">🗑️</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">Залов пока нет</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Форма добавления -->
+    <div style="flex:1; min-width:260px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+        <h2 style="font-size:1.05rem; font-weight:700; margin-bottom:1rem;">Добавить зал</h2>
+        <form method="post" action="{{ url_for('admin_hall_add') }}">
+            <input type="text" class="form-input" name="name" placeholder="Название зала" required style="margin-bottom:0.5rem;">
+            <select class="form-input" name="format" style="margin-bottom:0.5rem;">
+                <option value="2D">2D</option>
+                <option value="3D">3D</option>
+                <option value="IMAX">IMAX</option>
+                <option value="VIP">VIP</option>
+            </select>
+            <input type="number" class="form-input" name="rows" placeholder="Рядов" required min="1" max="20" style="margin-bottom:0.5rem;">
+            <input type="number" class="form-input" name="seats_per_row" placeholder="Мест в ряду" required min="1" max="30" style="margin-bottom:0.5rem;">
+            <p style="font-size:0.8rem; color:var(--text-muted);">Вместимость рассчитается автоматически. Места создадутся в таблице зала.</p>
+            <button type="submit" class="btn btn--primary btn--full">Добавить зал</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

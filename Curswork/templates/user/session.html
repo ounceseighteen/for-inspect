@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Выбор места — {{ sess.title }}{% endblock %}
+
+{% block content %}
+
+<div style="margin-top:1.5rem; margin-bottom:1rem;">
+    <a href="{{ url_for('film', film_id=sess.film_id) }}" class="btn btn--outline btn--sm" style="text-decoration:none;">← Назад к фильму</a>
+</div>
+
+<div style="display:flex; gap:1.5rem; flex-wrap:wrap; align-items:flex-start; margin-top:0.5rem;">
+
+    <div style="flex:1; min-width:300px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+        <h1 style="font-size:1.5rem; font-weight:800; margin-bottom:0.8rem;">{{ sess.title }}</h1>
+        <div style="display:flex; flex-direction:column; gap:0.4rem; color:var(--text-muted); font-size:0.92rem;">
+            <span>Дата: <b style="color:var(--text);">{{ sess.date.split('-')|reverse|join('.') }} в {{ sess.time }}</b></span>
+            <span>Зал: <b style="color:var(--text);">{{ sess.hall_name }}</b></span>
+            {% if sess.duration %}<span>Длительность: <b style="color:var(--text);">{{ sess.duration }} мин.</b></span>{% endif %}
+            <span>Цена: <b style="color:var(--accent);">{{ sess.price|int }} ₽</b></span>
+        </div>
+    </div>
+
+    <div style="flex:1; min-width:300px;">
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+            <h2 style="font-size:1rem; font-weight:700; margin-bottom:0.6rem;">Как это работает</h2>
+            <ul style="color:var(--text-muted); font-size:0.85rem; line-height:1.6; margin:0; padding-left:1.1rem; list-style:disc;">
+                <li>Кликните по свободному месту, чтобы забронировать его.</li>
+                <li>Бронь действует до начала сеанса; неоплаченная бронь автоматически отменяется за 30 минут.</li>
+                <li>Оплатить бронь и получить билет на почту можно в личном кабинете.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Схема зала -->
+<div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem; margin-top:1rem; overflow-x:auto;">
+    <div style="background:var(--text-muted); color:var(--bg); text-align:center; padding:8px; border-radius:6px; margin-bottom:2.2rem; font-size:0.85rem;">ЭКРАН</div>
+
+    {% if rows %}
+    <div style="display:flex; flex-direction:column; gap:8px; align-items:center;">
+        {% for row_num in rows|sort %}
+        <div style="display:flex; gap:6px; align-items:center; width:100%;">
+            <span style="font-size:0.75rem; color:var(--text-muted); width:24px; text-align:right; flex-shrink:0;">{{ row_num }}</span>
+            <div style="display:flex; gap:6px; flex:1; justify-content:center; flex-wrap:wrap;">
+                {% for seat in rows[row_num] %}
+                <form method="post" action="{{ url_for('book') }}" style="margin:0; padding:0;">
+                    <input type="hidden" name="session_id" value="{{ sess.id }}">
+                    <button type="submit" name="seat_id" value="{{ seat.id }}"
+                            {% if seat.booked %}disabled{% endif %}
+                            style="width:32px; height:32px; font-size:0.7rem; border-radius:5px; cursor:{% if seat.booked %}not-allowed{% else %}pointer{% endif %};
+                                   {% if seat.booked %}background:var(--border); color:var(--text-muted); border:1px solid var(--border);
+                                   {% else %}background:var(--bg-card); color:var(--text); border:1px solid var(--accent);{% endif %}">
+                        {{ seat.num }}
+                    </button>
+                </form>
+                {% endfor %}
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-muted); width:24px; flex-shrink:0;">{{ row_num }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div style="display:flex; gap:1rem; margin-top:1rem; font-size:0.78rem; color:var(--text-muted); justify-content:center;">
+        <span><span style="display:inline-block; width:14px; height:14px; background:var(--bg-card); border:1px solid var(--accent); border-radius:3px; vertical-align:middle;"></span> Свободно</span>
+        <span><span style="display:inline-block; width:14px; height:14px; background:var(--border); border-radius:3px; vertical-align:middle;"></span> Занято</span>
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted); text-align:center; padding:2rem 0;">Для этого зала ещё не созданы места.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

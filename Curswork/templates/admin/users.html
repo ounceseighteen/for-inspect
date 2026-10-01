@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Пользователи — Мир Кино{% endblock %}
+
+{% block admin_content %}
+<div style="margin-bottom:1.5rem;">
+    <h1 style="font-size:1.6rem; font-weight:800; margin-bottom:0.35rem;">Пользователи</h1>
+</div>
+
+<table class="admin-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Имя</th>
+            <th>Email</th>
+            <th>Телефон</th>
+            <th>Роль</th>
+            <th>Статус</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.name }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.phone or '—' }}</td>
+            <td>
+                {% if u.id != user.id %}
+                <form method="post" action="{{ url_for('admin_user_role', user_id=u.id) }}" style="display:inline;">
+                    <select name="role" class="form-select-sm" onchange="if(confirm('Изменить роль пользователя?')) this.form.submit();">
+                        <option value="client" {% if u.role == 'client' %}selected{% endif %}>Клиент</option>
+                        <option value="cashier" {% if u.role == 'cashier' %}selected{% endif %}>Кассир</option>
+                        <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Администратор</option>
+                    </select>
+                </form>
+                {% else %}
+                <span>{% if u.role == 'admin' %}Администратор{% elif u.role == 'cashier' %}Кассир{% else %}Клиент{% endif %}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if u.is_banned %}
+                <span style="color:var(--danger);">Заблокирован</span>
+                {% else %}
+                <span style="color:var(--success);">Активен</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if u.id != user.id %}
+                <form method="post" action="{{ url_for('admin_user_ban', user_id=u.id) }}" style="display:inline;"
+                      onsubmit="return confirm('{% if u.is_banned %}Разблокировать?{% else %}Заблокировать?{% endif %}')">
+                    <button type="submit" class="btn btn--icon {% if u.is_banned %}btn--success{% else %}btn--danger{% endif %}"
+                            title="{% if u.is_banned %}Разблокировать{% else %}Заблокировать{% endif %}">
+                        {% if u.is_banned %}🔓{% else %}🔒{% endif %}
+                    </button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted);">Пользователей не найдено</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

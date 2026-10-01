@@ -1,0 +1,66 @@
+/* ─── ХЕДЕР ─── */
+.header {
+    background: rgba(13, 15, 20, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.logo__img {
+    height: 62px;
+    width: auto;
+    display: block;
+    object-fit: contain;
+    margin-left: -10;
+}
+
+.logo__icon, .logo__text {
+    display: none;
+}
+
+.nav__link {
+    display: flex;
+    align-items: center;
+    color: var(--text-muted); /* Тот цвет, который у тебя сейчас для текста */
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.nav__link:hover {
+    color: var(--accent);
+}
+
+.nav__link--admin { color: var(--accent); }
+
+.nav__user {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.nav__link:hover .nav__icon {
+    filter: grayscale(0); /* Возвращаем иконке цвет при наведении */
+    opacity: 1;           /* Делаем яркой */
+    color: var(--accent);
+}
+
+.nav__icon {
+    margin-right: 8px;
+    filter: grayscale(1); /* Делаем иконку серой по умолчанию */
+    opacity: 0.7;         /* Чуть приглушаем */
+    transition: all 0.3s ease;
+}

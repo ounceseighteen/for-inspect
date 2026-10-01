@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Редактирование — {{ film.title }}{% endblock %}
+
+{% block admin_content %}
+<div style="margin-bottom:1.5rem;">
+    <a href="{{ url_for('personal') + '?tab=films' }}" class="btn btn--outline btn--sm">← Назад к фильмам</a>
+</div>
+
+<div style="max-width:640px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; margin:0 auto;">
+    <h1 style="font-size:1.4rem; font-weight:800; margin-bottom:0.4rem;">Редактирование фильма</h1>
+    <p style="color:var(--text-muted); font-size:0.9rem;">ID {{ film.id }}</p>
+
+    <form method="post" action="{{ url_for('admin_film_edit', film_id=film.id) }}">
+        <h3 class="settings-section__title">Название</h3>
+        <input type="text" class="form-input" name="title" value="{{ film.title }}" required style="margin-bottom:0.7rem;">
+
+        <h3 class="settings-section__title">Жанр</h3>
+        <select class="form-input" name="genre" style="margin-bottom:0.7rem;">
+            {% set genres = ['Драма', 'Комедия', 'Фантастика', 'Приключения', 'Боевик', 'Триллер', 'Ужасы', 'Мелодрама', 'Мультфильмы', 'Семейный', 'Документальный', 'Фэнтези', 'Спорт'] %}
+            {% for g in genres %}
+            <option value="{{ g }}" {% if g == film.genre %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+        </select>
+
+        <h3 class="settings-section__title">Длительность (мин.)</h3>
+        <input type="number" class="form-input" name="duration" value="{{ film.duration }}" min="1" required style="margin-bottom:0.7rem;">
+
+        <h3 class="settings-section__title">Описание</h3>
+        <textarea class="form-input" name="description" rows="5" style="resize:vertical; margin-bottom:0.7rem;">{{ film.description or '' }}</textarea>
+
+        <h3 class="settings-section__title">Афиша (имя файла в static/posters/)</h3>
+        <input type="text" class="form-input" name="poster" value="{{ film.poster or '' }}" placeholder="Отправьте новый постер через редактор в личном кабинете">
+
+        <button type="submit" class="btn btn--primary btn--full" style="margin-top:0.8rem;">Сохранить</button>
+    </form>
+</div>
+{% endblock %}

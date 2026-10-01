@@ -1,0 +1,1557 @@
+{% extends 'base.html' %}
+{% block title %}Личный кабинет — Мир Кино{% endblock %}
+
+{% block content %}
+<div class="personal-layout">
+
+    <!-- Левая карточка профиля -->
+    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+        <div class="personal-profile">
+            <div class="personal-profile__name">{{ user.name }}</div>
+            <div class="personal-profile__email">{{ user.email }}</div>
+            {% if user.role == 'admin' %}
+                <div class="personal-profile__role personal-profile__role--admin">Администратор</div>
+            {% elif user.role == 'cashier' %}
+                <div class="personal-profile__role personal-profile__role--cashier">Кассир</div>
+            {% else %}
+                <div class="personal-profile__role personal-profile__role--client">Клиент</div>
+            {% endif %}
+        </div>
+        {% if user.role == 'admin' %}
+        <div id="addBlock" style="display:none; margin-top:1rem; text-align:center;">
+            <p id="addHint" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;"></p>
+            <button class="btn btn--success" id="addBtn" onclick="handleAdd()"
+                    style="width:100%; height:40px; font-size:1.4rem;">➕</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Правая часть — вкладки -->
+    <div class="personal-content">
+
+        <!-- Вкладки -->
+        <div class="personal-tabs">
+            {% if user.role in ('admin', 'cashier') %}
+            <button class="personal-tab active" onclick="switchPersonalTab('dashboard', this)">Оформить билеты</button>
+            {% endif %}
+
+            {% if user.role == 'admin' %}
+            <button class="personal-tab" onclick="switchPersonalTab('promotions', this)">Акции</button>
+            <button class="personal-tab" onclick="switchPersonalTab('films', this)">Фильмы</button>
+            <button class="personal-tab" onclick="switchPersonalTab('halls', this)">Залы</button>
+            <button class="personal-tab" onclick="switchPersonalTab('sessions', this)">Сеансы</button>
+            {% endif %}
+
+            <button class="personal-tab" onclick="switchPersonalTab('bookings', this)">
+                {% if user.role == 'cashier' %}Бронирования{% else %}Билеты{% endif %}
+            </button>
+
+            {% if user.role == 'admin' %}
+            <button class="personal-tab" onclick="switchPersonalTab('users', this)">Пользователи</button>
+            {% endif %}
+        </div>
+
+        <!-- Оформить билеты (только админ) -->
+        {% if user.role in ('admin', 'cashier') %}
+        <div id="tab-dashboard" class="personal-section active">
+            <!-- Поиск -->
+            <div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
+                <input type="text" class="form-select-sm" id="filmSearch" placeholder="Поиск фильма..."
+                       oninput="filterFilmsGrid(this.value)"
+                       style="width:220px; padding:6px 12px;">
+            </div>
+
+            <!-- Карточки фильмов -->
+            <div id="filmsGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:1rem;">
+                {% for f in films %}
+                <div class="film-sell-card" data-title="{{ f.title|lower }}" onclick="selectFilmForSale({{ f.id }})">
+                    {% if f.poster %}
+                    <img src="{{ url_for('static', filename='posters/' + f.poster) }}"
+                         alt="{{ f.title }}"
+                         style="width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:var(--radius);">
+                    {% else %}
+                    <div style="width:100%; aspect-ratio:2/3; background:var(--bg); border-radius:var(--radius);
+                                display:flex; align-items:center; justify-content:center;
+                                font-size:2rem; font-weight:700; color:var(--accent);">
+                        {{ f.title[0]|upper }}
+                    </div>
+                    {% endif %}
+                    <div style="margin-top:0.5rem; font-size:0.85rem; font-weight:600; text-align:center;">{{ f.title }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Фильмы (только админ) -->
+        <div id="tab-films" class="personal-section" style="display:none;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Афиша</th>
+                        <th>Описание</th>
+                        <th>Название</th>
+                        <th>Жанр</th>
+                        <th>Длительность</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in films %}
+                    <tr data-film-id="{{ f.id }}">
+                        <td>
+                            <button type="button"
+                                    class="poster-edit-btn"
+                                    onclick="openPosterModal({{ f.id }}, '{{ f.poster }}')"
+                                    title="Изменить афишу">
+                                ✏️
+                            </button>
+                        </td>
+                        <td>
+                            <button type="button"
+                                    class="poster-edit-btn"
+                                    onclick='openDescModal({{ f.id }}, {{ f.description|tojson }})'
+                                    title="Изменить описание">
+                                ✏️
+                            </button>
+                        </td>
+                        <td>
+                            <input type="text" class="form-select-sm film-field" name="title"
+                                   value="{{ f.title }}" oninput="markFilmChanged(this)">
+                        </td>
+                        <td>
+                            <select class="form-select-sm film-field" name="genre" onchange="markFilmChanged(this)">
+                                {% set genres = ['Драма', 'Комедия', 'Фантастика', 'Приключения', 'Боевик', 'Триллер', 'Ужасы', 'Мелодрама', 'Мультфильмы', 'Семейный', 'Документальный', 'Фэнтези', 'Спорт'] %}
+                                {% for g in genres %}
+                                <option value="{{ g }}" {% if g in f.genre %}selected{% endif %}>{{ g }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" class="form-select-sm film-field" name="duration"
+                                    value="{{ f.duration }}" min="1" style="width:70px;" oninput="markFilmChanged(this)">
+                        </td>
+                        <td>
+                            <form method="post" id="film-form-delete-{{ f.id }}"
+                                  action="{{ url_for('admin_film_delete', film_id=f.id) }}"
+                                  onsubmit="return confirm('Удалить фильм?')"></form>
+                            <form method="post" id="film-form-save-{{ f.id }}"
+                                  action="{{ url_for('admin_film_inline_edit', film_id=f.id) }}">
+                                <input type="hidden" name="title" class="hidden-title">
+                                <input type="hidden" name="genre" class="hidden-genre">
+                                <input type="hidden" name="duration" class="hidden-duration">
+                            </form>
+                            <button type="button" id="film-btn-{{ f.id }}" class="btn btn--danger btn--icon"
+                                    onclick="submitFilmRow({{ f.id }})" title="Удалить">🗑️</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Залы (только админ) -->
+        <div id="tab-halls" class="personal-section" style="display:none;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Мест</th>
+                        <th>Формат</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in halls %}
+                    <tr data-hall-id="{{ h.id }}">
+                        <td>
+                            <input type="text" class="form-select-sm hall-field" name="name"
+                                   value="{{ h.name }}" onchange="markHallChanged(this)">
+                        </td>
+                        <td>
+                            <input type="number" class="form-select-sm hall-field" name="capacity"
+                                   value="{{ h.capacity }}" min="1" style="width:70px;" onchange="markHallChanged(this)">
+                        </td>
+                        <td>
+                            <select class="form-select-sm hall-field" name="format" onchange="markHallChanged(this)">
+                                <option value="2D" {% if h.format =='2D' %}selected{% endif %}>2D</option>
+                                <option value="3D" {% if h.format =='3D' %}selected{% endif %}>3D</option>
+                                <option value="IMAX" {% if h.format =='IMAX' %}selected{% endif %}>IMAX</option>
+                                <option value="VIP" {% if h.format =='VIP' %}selected{% endif %}>VIP</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-select-sm hall-field" name="status" onchange="markHallChanged(this)">
+                                <option value="open" {% if h.status =='open' %}selected{% endif %}>Открыт</option>
+                                <option value="closed" {% if h.status =='closed' %}selected{% endif %}>Закрыт</option>
+                            </select>
+                        </td>
+                        <td>
+                            <form method="post" id="hall-form-delete-{{ h.id }}"
+                                  action="{{ url_for('admin_hall_delete', hall_id=h.id) }}"
+                                  onsubmit="return confirm('Удалить зал?')"></form>
+                            <form method="post" id="hall-form-save-{{ h.id }}"
+                                  action="{{ url_for('admin_hall_edit', hall_id=h.id) }}">
+                                <input type="hidden" name="name" class="hidden-name">
+                                <input type="hidden" name="status" class="hidden-status">
+                                <input type="hidden" name="capacity" class="hidden-capacity">
+                                <input type="hidden" name="format" class="hidden-format">
+                            </form>
+                            <button type="button" id="hall-btn-{{ h.id }}" class="btn btn--danger btn--icon"
+                                    onclick="submitHallRow({{ h.id }})" title="Удалить">🗑️</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Пользователи (только админ) -->
+        <div id="tab-users" class="personal-section" style="display:none;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Имя</th>
+                        <th>Email</th>
+                        <th>Телефон</th>
+                        <th>Роль</th>
+                        <th>Карта лояльности</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>{{ u.name }}</td>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.phone or '—' }}</td>
+                        <td>
+                            {% if u.id != user.id %}
+                            <form method="post" action="{{ url_for('admin_user_role', user_id=u.id) }}" style="margin-left: -8px;">
+                                <select name="role" onchange="if(confirm('Изменить роль пользователя?')) this.form.submit();" class="form-select-sm">
+                                    <option value="client" {% if u.role =='client' %}selected{% endif %}>Клиент</option>
+                                    <option value="cashier" {% if u.role =='cashier' %}selected{% endif %}>Кассир</option>
+                                    <option value="admin" {% if u.role =='admin' %}selected{% endif %}>Администратор</option>
+                                </select>
+                            </form>
+                            {% else %}
+                                {% if u.role == 'admin' %}Администратор
+                                {% elif u.role == 'cashier' %}Кассир
+                                {% elif u.role == 'client' %}Клиент
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.loyalty_level %}
+                            <span style="color:var(--accent); font-weight:600;">{{ u.loyalty_level }}</span>
+                            <br><span style="font-size:0.8rem; color:var(--text-muted);">{{ u.loyalty_bonus_balance or 0 }} бонусов</span>
+                            {% else %}
+                            <span style="color:var(--text-muted);">Карты лояльности нет</span>
+                            {% endif %}
+                        </td>
+                        <td>{% if u.is_banned %}<span style="color:var(--danger);">Заблокирован</span>{% else %}<span style="color:var(--success);">Активен</span>{% endif %}</td>
+                        <td>
+                            {% if u.id != user.id %}
+                            <form method="post" action="{{ url_for('admin_user_ban', user_id=u.id) }}"
+                                  onsubmit="return confirm('{% if u.is_banned %}Разблокировать пользователя?{% else %}Заблокировать пользователя?{% endif %}')">
+                                <button type="submit" class="btn btn--icon {% if u.is_banned %}btn--success{% else %}btn--danger{% endif %}"
+                                        title="{% if u.is_banned %}Разблокировать{% else %}Заблокировать{% endif %}">
+                                    {% if u.is_banned %}🔓{% else %}🔒{% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Сеансы (админ + кассир) -->
+        <div id="tab-sessions" class="personal-section" style="display:{% if user.role == 'cashier' %}flex{% else %}none{% endif %};">
+            {% if user.role == 'admin' %}
+            {% endif %}
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Фильм</th>
+                        <th>Дата</th>
+                        <th>Время</th>
+                        <th>Зал</th>
+                        <th>Цена</th>
+                        <th>Статус</th>
+                        {% if user.role == 'admin' %}<th>Действия</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sessions %}
+                    <tr data-session-id="{{ s.id }}">
+                        {% if user.role == 'admin' %}
+                        <td>
+                            <select class="form-select-sm session-field" name="film_id" onchange="markChanged(this)">
+                                {% for f in films %}
+                                <option value="{{ f.id }}" {% if f.id == s.film_id %}selected{% endif %}>{{ f.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="date" class="form-select-sm session-field" name="date" value="{{ s.date }}" onchange="markChanged(this)">
+                        </td>
+                        <td>
+                            <input type="time" class="form-select-sm session-field" name="time" value="{{ s.time }}" onchange="markChanged(this)">
+                        </td>
+                        <td>
+                            <select class="form-select-sm session-field" name="hall_id" onchange="markChanged(this)">
+                                {% for h in halls %}
+                                {% if h.status != 'closed' %}
+                                <option value="{{ h.id }}" {% if h.id == s.hall_id %}selected{% endif %}>{{ h.name }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" class="form-select-sm session-field" name="price" value="{{ s.price|int }}" style="width:70px;" onchange="markChanged(this)">
+                        </td>
+                        <td>
+                            {% if s.date < today %}
+                                <span style="color:var(--text-muted);">Прошёл</span>
+                            {% elif s.date == today and s.time < now_time %}
+                                <span style="color:var(--text-muted);">Прошёл</span>
+                            {% elif s.date == today %}
+                                <span style="color:var(--accent);">Сегодня</span>
+                            {% else %}
+                                <span style="color:var(--success);">Ожидается</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" id="form-delete-{{ s.id }}" action="{{ url_for('admin_session_delete', session_id=s.id) }}" onsubmit="return confirm('Удалить сеанс?')"></form>
+                            <form method="post" id="form-save-{{ s.id }}" action="{{ url_for('admin_session_edit', session_id=s.id) }}">
+                                <input type="hidden" name="film_id" class="hidden-film_id">
+                                <input type="hidden" name="hall_id" class="hidden-hall_id">
+                                <input type="hidden" name="date" class="hidden-date">
+                                <input type="hidden" name="time" class="hidden-time">
+                                <input type="hidden" name="price" class="hidden-price">
+                            </form>
+                            <div style="display:flex; gap:0.3rem; justify-content:center;">
+                                <button type="button" id="btn-{{ s.id }}" class="btn btn--danger btn--icon"
+                                        onclick="submitRow({{ s.id }}, this)" title="Удалить">🗑️</button>
+                            </div>
+                        </td>
+                        {% else %}
+                        <td>{{ s.title }}</td>
+                        <td>{{ s.date.split('-')|reverse|join('.') }}</td>
+                        <td>{{ s.time }}</td>
+                        <td>{{ s.hall_name }}</td>
+                        <td>{{ s.price|int }} ₽</td>
+                        <td>
+                            {% if s.date < today %}
+                                <span style="color:var(--text-muted);">Прошёл</span>
+                            {% elif s.date == today and s.time < now_time %}
+                                <span style="color:var(--text-muted);">Прошёл</span>
+                            {% elif s.date == today %}
+                                <span style="color:var(--accent);">Сегодня</span>
+                            {% else %}
+                                <span style="color:var(--success);">Ожидается</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Билеты (админ + кассир) -->
+        <div id="tab-bookings" class="personal-section" style="display:none;">
+
+            <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap;">
+                <form method="get" action="{{ url_for('personal') }}" style="display:flex; gap:0.5rem; align-items:center; margin:0;">
+                    <input type="hidden" name="tab" value="bookings">
+                    <input type="text" class="form-select-sm" name="q" placeholder="Код, имя или email..."
+                           value="{{ request.args.get('q', '') }}" style="width:220px; padding:6px 12px;">
+                    <select class="form-select-sm" name="status" style="padding:6px 12px;">
+                        <option value="">Все статусы</option>
+                        <option value="booked" {% if request.args.get('status') == 'booked' %}selected{% endif %}>Забронированы</option>
+                        <option value="paid" {% if request.args.get('status') == 'paid' %}selected{% endif %}>Оплачены</option>
+                        <option value="cancelled" {% if request.args.get('status') == 'cancelled' %}selected{% endif %}>Отменены</option>
+                    </select>
+                    <button type="submit" class="btn btn--primary btn--sm">Найти</button>
+                    {% if request.args.get('q') or request.args.get('status') %}
+                    <a href="{{ url_for('personal') }}?tab=bookings" class="btn btn--outline btn--sm">Сбросить</a>
+                    {% endif %}
+                </form>
+                <input type="text" class="form-select-sm" id="bookingSearchInput" placeholder="Быстрый фильтр по коду..."
+                       oninput="filterBookingsByCode(this.value)"
+                       style="width:220px; padding:6px 12px;">
+            </div>
+
+            <table class="admin-table" id="bookingsTable">
+                <thead>
+                    <tr>
+                        <th>Код</th>
+                        <th>Клиент</th>
+                        <th>Фильм</th>
+                        <th>Дата</th>
+                        <th>Время</th>
+                        <th>Место</th>
+                        <th>Акция</th>
+                        {% if user.role == 'admin' %}
+                        <th>Статус</th>
+                        {% endif %}
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in bookings %}
+                    <tr class="booking-row"> <td class="booking-code">{{ b.custom_code }}</td> <td>{{ b.user_email }}, {{ b.user_name }}</td>
+                        <td>{{ b.title }}</td>
+                        <td>{{ b.date.split('-')|reverse|join('.') }}</td>
+                        <td>{{ b.time }}</td>
+                        <td class="booking-seat-cell">{{ b.seats_text|replace(', ', '<br>')|safe }}</td>
+                        <td>
+                            {% if b.promo_title %}
+                            {% set words = b.promo_title.split() %}
+                            {% set abbr = words|map(attribute=0)|join('')|upper %}
+                            <span style="color:var(--accent);">{{ abbr }}(−{{ b.promo_discount|default(0)|int }}%)</span>
+                            <br><span style="font-size:0.8rem; color:var(--text-muted);">{{ b.final_price|default(b.session_price|default(0))|int }} ₽</span>
+                            {% else %}
+                            <span style="color:var(--text-muted);">БА</span>
+                            <br><span style="font-size:0.8rem; color:var(--text-muted);">{{ b.session_price|default(b.final_price|default(0))|int }} ₽</span>
+                            {% endif %}
+                        </td>
+
+                        {% if user.role == 'admin' %}
+                        <td>
+                            {% if b.status == 'booked' %}
+                                <span style="color:var(--accent);">Забронирован</span>
+                            {% elif b.status == 'paid' %}
+                                <span style="color:var(--success);">Оплачен</span>
+                            {% elif b.status == 'cancelled' %}
+                                <span style="color:var(--danger);">Отменён</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+
+                        <td>
+                            {% if b.status == 'booked' %}
+                            <form method="post" action="{{ url_for('confirm_payment', booking_id=b.id) }}" style="display:inline; margin:0; padding:0;">
+                                <button type="submit" class="btn btn--success" title="Оплатить бронь"
+                                        style="padding:4px 10px; font-size:1.1rem; border-radius:var(--radius); line-height:1; cursor:pointer;">
+                                    💵
+                                </button>
+                            </form>
+                            {% else %}
+                            <span style="color:var(--text-muted);">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not bookings %}
+                    <tr>
+                        <td colspan="8" style="text-align:center; padding:20px; color:var(--text-muted);">Нет активных бронирований</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Вкладка акций -->
+        {% if user.role == 'admin' %}
+        <div id="tab-promotions" class="personal-section" style="display:none;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Изображение</th>
+                        <th>Описание</th>
+                        <th>Заголовок</th>
+                        <th>Скидка (%)</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in promotions %}
+                    <tr data-promo-id="{{ p.id }}">
+                        <td>
+                            <button type="button" class="poster-edit-btn"
+                                    onclick='openPromoImageModal({{ p.id }}, {{ p.image|tojson }})'
+                                    title="Изменить изображение">✏️</button>
+                        </td>
+                        <td>
+                            <button type="button" class="poster-edit-btn"
+                                    onclick='openPromoDescModal({{ p.id }}, {{ p.description|tojson if p.description else "null" }})'
+                                    title="Изменить описание">✏️</button>
+                        </td>
+                        <td>
+                            <input type="text" class="form-select-sm promo-field" name="title"
+                                   value="{{ p.title }}" oninput="markPromoChanged(this)">
+                        </td>
+                        <td>
+                            <input type="number" class="form-select-sm promo-field" name="discount"
+                                   value="{{ p.discount }}" min="0" max="100" style="width:70px;"
+                                   oninput="markPromoChanged(this)">
+                        </td>
+                        <td>
+                            <form method="post" id="promo-form-delete-{{ p.id }}"
+                                  action="{{ url_for('admin_promotion_delete', promo_id=p.id) }}"
+                                  onsubmit="return confirm('Удалить акцию?')"></form>
+                            <form method="post" id="promo-form-save-{{ p.id }}"
+                                  action="{{ url_for('admin_promotion_edit', promo_id=p.id) }}">
+                                <input type="hidden" name="title" class="hidden-title">
+                                <input type="hidden" name="discount" class="hidden-discount">
+                            </form>
+                            <button type="button" id="promo-btn-{{ p.id }}" class="btn btn--danger btn--icon"
+                                    onclick="submitPromoRow({{ p.id }})" title="Удалить">🗑️</button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        </div>
+    </div>
+</div>
+
+<!-- Модалка добавления фильма -->
+<div id="filmAddModal" class="settings-overlay" style="display:none;" onclick="closeFilmModal(event)">
+    <div class="settings-modal">
+        <button class="settings-modal__close" onclick="closeFilmModal()">&times;</button>
+        <h2 class="settings-modal__title">Добавить фильм</h2>
+
+        <form method="post" action="{{ url_for('admin_film_add') }}" enctype="multipart/form-data"
+              class="settings-section" onsubmit="return validateFilmForm()">
+
+            <h3 class="settings-section__title">Название</h3>
+            <div class="input-group">
+                <input type="text" class="form-input" id="filmTitle" name="title" placeholder="Название фильма">
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Жанр</h3>
+            <select class="form-input" name="genre">
+                {% set genres = ['Драма', 'Комедия', 'Фантастика', 'Приключения', 'Боевик', 'Триллер', 'Ужасы', 'Мелодрама', 'Мультфильмы', 'Семейный', 'Документальный', 'Фэнтези', 'Спорт'] %}
+                {% for g in genres %}
+                <option value="{{ g }}">{{ g }}</option>
+                {% endfor %}
+            </select>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Длительность (мин.)</h3>
+            <div class="input-group">
+                <input type="number" class="form-input" id="filmDuration" name="duration" placeholder="120" min="1">
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Описание</h3>
+            <div class="input-group">
+                <textarea class="form-input" name="description" placeholder="Описание фильма" rows="3"
+                          style="resize:vertical;"></textarea>
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Афиша</h3>
+            <div class="input-group">
+                <input type="file" class="form-input" name="poster" accept="image/*"
+                       onchange="previewPoster(this)">
+            </div>
+            <img id="posterPreview" src="" alt="Превью"
+                 style="display:none; width:100%; max-height:300px; object-fit:cover; border-radius:var(--radius); margin-top:0.5rem;">
+
+            <p id="filmFormMsg" style="display:none; font-size:0.875rem; color:var(--danger);"></p>
+            <button type="submit" class="btn btn--primary btn--full">Добавить фильм</button>
+        </form>
+    </div>
+</div>
+<div id="promoAddModal" class="settings-overlay" style="display:none;" onclick="closePromoModal(event)">
+    <div class="settings-modal">
+        <button class="settings-modal__close" onclick="closePromoModal()">&times;</button>
+        <h2 class="settings-modal__title">Добавить акцию</h2>
+        <form method="post" action="{{ url_for('admin_promotion_add') }}" class="settings-section" enctype="multipart/form-data">
+            <h3 class="settings-section__title">Заголовок</h3>
+            <input type="text" class="form-input" name="title" placeholder="Название акции" required>
+            <div class="settings-divider"></div>
+            <h3 class="settings-section__title">Описание</h3>
+            <textarea class="form-input" name="description" rows="3" style="resize:vertical;"></textarea>
+            <div class="settings-divider"></div>
+            <h3 class="settings-section__title">Скидка (%)</h3>
+            <input type="number" class="form-input" name="discount" min="0" max="100" value="0">
+            <div class="settings-divider"></div>
+            <h3 class="settings-section__title">Изображение</h3>
+            <input type="file" class="form-input" name="image" accept="image/*"
+                   onchange="previewPromoAddImage(this)">
+            <img id="promoAddImagePreview" src="" style="display:none; width:100%; max-height:300px; object-fit:cover; border-radius:var(--radius); margin-top:0.5rem;">
+            <button type="submit" class="btn btn--primary btn--full" style="margin-top:1rem;">Добавить</button>
+        </form>
+    </div>
+</div>
+
+<div id="hallAddModal" class="settings-overlay" style="display:none;" onclick="closeHallModal(event)">
+    <div class="settings-modal">
+        <button class="settings-modal__close" onclick="closeHallModal()">&times;</button>
+        <h2 class="settings-modal__title">Добавить зал</h2>
+
+        <form method="post" action="{{ url_for('admin_hall_add') }}" class="settings-section"
+              onsubmit="return validateHallForm()">
+
+            <h3 class="settings-section__title">Название</h3>
+            <div class="input-group">
+                <input type="text" class="form-input" id="hallName" name="name" placeholder="Красный зал">
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Формат</h3>
+            <select class="form-input" name="format">
+                <option value="2D">2D</option>
+                <option value="3D">3D</option>
+                <option value="IMAX">IMAX</option>
+                <option value="VIP">VIP</option>
+            </select>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Количество рядов</h3>
+            <div class="input-group">
+                <input type="number" class="form-input" id="hallRows" name="rows" placeholder="6" min="1" max="20">
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Мест в ряду</h3>
+            <div class="input-group">
+                <input type="number" class="form-input" id="hallSeats" name="seats_per_row" placeholder="10" min="1" max="30">
+            </div>
+
+            <p style="font-size:0.8rem; color:var(--text-muted);">Вместимость рассчитается автоматически.</p>
+
+            <p id="hallFormMsg" style="display:none; font-size:0.875rem; color:var(--danger);"></p>
+            <button type="submit" class="btn btn--primary btn--full">Добавить зал</button>
+        </form>
+    </div>
+</div>
+
+<!-- Модалка добавления сеанса -->
+<div id="sessionAddModal" class="settings-overlay" style="display:none;" onclick="closeSessionModal(event)">
+    <div class="settings-modal">
+        <button class="settings-modal__close" onclick="closeSessionModal()">&times;</button>
+        <h2 class="settings-modal__title">Добавить сеанс</h2>
+
+        <form method="post" action="{{ url_for('admin_session_add') }}" class="settings-section"
+              onsubmit="return validateSessionForm()">
+
+            <h3 class="settings-section__title">Фильм</h3>
+            <select class="form-input" name="film_id" id="sessionFilm">
+                {% for f in films %}
+                <option value="{{ f.id }}">{{ f.title }}</option>
+                {% endfor %}
+            </select>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Зал</h3>
+            <select class="form-input" name="hall_id" id="sessionHall">
+                {% for h in halls %}
+                {% if h.status != 'closed' %}
+                <option value="{{ h.id }}">{{ h.name }} ({{ h.format }})</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Дата</h3>
+            <div class="input-group">
+                <input type="date" class="form-input" name="date" id="sessionDate">
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Время</h3>
+            <div class="input-group">
+                <input type="time" class="form-input" name="time" id="sessionTime">
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <h3 class="settings-section__title">Стоимость (₽)</h3>
+            <div class="input-group">
+                <input type="number" class="form-input" name="price" id="sessionPrice" placeholder="400" min="0">
+            </div>
+
+            <p id="sessionFormMsg" style="display:none; font-size:0.875rem; color:var(--danger);"></p>
+            <button type="submit" class="btn btn--primary btn--full">Добавить сеанс</button>
+        </form>
+    </div>
+</div>
+
+<!-- Модалка смены афиши -->
+<div id="posterModal" class="settings-overlay" style="display:none;" onclick="closePosterModal(event)">
+    <div class="settings-modal">
+        <button class="settings-modal__close" onclick="closePosterModal()">&times;</button>
+        <h2 class="settings-modal__title">Изменить афишу</h2>
+        <form method="post" id="posterForm" enctype="multipart/form-data" class="settings-section">
+            <img id="currentPoster" src="" alt="Текущая афиша"
+                 style="width:100%; max-height:300px; object-fit:contain; border-radius:var(--radius); display:none;">
+            <div style="text-align:center; padding:2rem; color:var(--text-muted);" id="noPoster">Афиша не загружена</div>
+            <div class="settings-divider"></div>
+            <h3 class="settings-section__title">Новая афиша</h3>
+            <input type="file" class="form-input" name="poster" accept="image/*" onchange="previewNewPoster(this)">
+            <img id="newPosterPreview" src="" style="display:none; width:100%; max-height:200px; object-fit:contain; border-radius:var(--radius); margin-top:0.5rem;">
+            <button type="submit" class="btn btn--primary btn--full">Сохранить</button>
+        </form>
+    </div>
+</div>
+
+<!-- Модалка редактирования описания -->
+<div id="descModal" class="settings-overlay" style="display:none;" onclick="closeDescModal(event)">
+    <div class="settings-modal">
+        <button class="settings-modal__close" onclick="closeDescModal()">&times;</button>
+        <h2 class="settings-modal__title">Изменить описание</h2>
+        <form method="post" id="descForm" class="settings-section">
+            <textarea class="form-input" id="descText" name="description" rows="6"
+                      style="resize:vertical;"></textarea>
+            <button type="submit" class="btn btn--primary btn--full">Сохранить</button>
+        </form>
+    </div>
+</div>
+
+<!-- Модалка изображения акции -->
+<div id="promoImageModal" class="settings-overlay" style="display:none;" onclick="closePromoImageModal(event)">
+    <div class="settings-modal">
+        <button class="settings-modal__close" onclick="closePromoImageModal()">&times;</button>
+        <h2 class="settings-modal__title">Изменить изображение</h2>
+        <form method="post" id="promoImageForm" enctype="multipart/form-data" class="settings-section">
+            <img id="currentPromoImage" src="" style="width:100%; max-height:200px; object-fit:cover; border-radius:var(--radius); display:none;">
+            <div style="text-align:center; padding:1rem; color:var(--text-muted);" id="noPromoImage">Изображение не загружено</div>
+            <div class="settings-divider"></div>
+            <h3 class="settings-section__title">Новое изображение</h3>
+            <input type="file" class="form-input" name="image" accept="image/*"
+                   onchange="previewPromoEditImage(this)">
+            <img id="promoImagePreview" src="" style="display:none; width:100%; max-height:200px; object-fit:contain; border-radius:var(--radius); margin-top:0.5rem;">
+            <button type="submit" class="btn btn--primary btn--full">Сохранить</button>
+        </form>
+    </div>
+</div>
+
+<!-- Модалка описания акции -->
+<div id="promoDescModal" class="settings-overlay" style="display:none;" onclick="closePromoDescModal(event)">
+    <div class="settings-modal">
+        <button class="settings-modal__close" onclick="closePromoDescModal()">&times;</button>
+        <h2 class="settings-modal__title">Изменить описание</h2>
+        <form method="post" id="promoDescForm" class="settings-section">
+            <textarea class="form-input" id="promoDescText" name="description" rows="6" style="resize:vertical;"></textarea>
+            <button type="submit" class="btn btn--primary btn--full">Сохранить</button>
+        </form>
+    </div>
+</div>
+
+<!-- Модалка продажи билета -->
+<div id="sellModal" class="settings-overlay" style="display:none;" onclick="closeSellModal(event)">
+    <div class="settings-modal" style="width:700px; max-height:90vh; overflow-y:auto;">
+        <button class="settings-modal__close" onclick="closeSellModal()">&times;</button>
+        <h2 class="settings-modal__title" id="sellModalTitle">Продажа билета</h2>
+
+        <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
+            <!-- Схема зала -->
+            <div style="flex:1; min-width:300px;">
+                <div style="background:var(--text-muted); color:var(--bg); text-align:center;
+                            padding:6px; border-radius:4px; margin-bottom:4rem; font-size:0.8rem;">
+                    ЭКРАН
+                </div>
+                <div id="seatMap" style="display:flex; flex-direction:column; gap:6px; align-items:center;"></div>
+                <div style="display:flex; gap:1rem; margin-top:0.8rem; font-size:0.75rem; color:var(--text-muted); justify-content:center;">
+                    <span><span style="display:inline-block; width:14px; height:14px; background:var(--bg-card); border:1px solid var(--accent); border-radius:3px; vertical-align:middle;"></span> Свободно</span>
+                    <span><span style="display:inline-block; width:14px; height:14px; background:var(--accent); border-radius:3px; vertical-align:middle;"></span> Выбрано</span>
+                    <span><span style="display:inline-block; width:14px; height:14px; background:var(--border); border-radius:3px; vertical-align:middle;"></span> Занято</span>
+                </div>
+            </div>
+
+            <!-- Правая панель -->
+            <div style="width:200px; display:flex; flex-direction:column; gap:1rem;">
+                <div id="sellInfo" style="font-size:0.85rem; color:var(--text-muted); line-height:1.8;"></div>
+                <div id="selectedSeatText" style="display:none; font-size:0.85rem; color:var(--text); line-height:1.5;"></div>
+
+                <div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Email клиента</p>
+                    <input type="email" class="form-input" id="clientEmail" placeholder="client@mail.ru">
+                </div>
+
+                <div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Акция</p>
+                    <select class="form-input" id="promoSelect" onchange="applyPromo()">
+                        <option value="">Без льготы</option>
+                        {% for p in promotions %}
+                        <option value="{{ p.id }}" data-discount="{{ p.discount }}">{{ p.title }} (−{{ p.discount }}%)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+<div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Способ оплаты</p>
+                    <select class="form-input" id="paymentMethodSelect">
+                        <option value="">Не выбран</option>
+                        <option value="bank">Банковской картой</option>
+                        <option value="bonus">Бонусной картой</option>
+                    </select>
+                </div>
+                <div id="saleTotalBox" style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:0.8rem;">
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.25rem;">Итого</div>
+                    <div id="finalPriceText" style="font-size:1.4rem; font-weight:900; color:var(--accent);">0 ₽</div>
+                </div>
+
+
+                <p id="sellMsg" style="display:none; font-size:0.8rem;"></p>
+                <button
+                    id="confirmSaleBtn"
+                    class="btn btn--primary btn--full"
+                    onclick="confirmSale()"
+                    disabled
+                >
+                    Принять оплату
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка выбора сеанса -->
+<div id="sessionPickerModal" class="settings-overlay" style="display:none;" onclick="closeSellSessionPicker(event)">
+    <div class="settings-modal" style="width:650px; max-height:90vh; overflow-y:auto;">
+        <button class="settings-modal__close" onclick="closeSellSessionPicker()">&times;</button>
+
+        <div style="display:flex; gap:1.5rem;">
+            <!-- Афиша -->
+            <div style="width:160px; flex-shrink:0;">
+                <img id="pickerPoster" src="" alt=""
+                     style="width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:var(--radius); display:none;">
+                <div id="pickerNoPoster" style="width:100%; aspect-ratio:2/3; background:var(--bg);
+                     border-radius:var(--radius); display:flex; align-items:center; justify-content:center;
+                     font-size:2.5rem; font-weight:700; color:var(--accent);"></div>
+            </div>
+
+            <!-- Инфо + даты + время -->
+            <div style="flex:1; display:flex; flex-direction:column; gap:1rem;">
+                <div>
+                    <h3 id="pickerTitle" style="font-size:1.2rem; font-weight:700; margin-bottom:0.3rem;"></h3>
+                    <p id="pickerGenre" style="font-size:0.85rem; color:var(--text-muted);"></p>
+                    <p id="pickerDuration" style="font-size:0.85rem; color:var(--text-muted);"></p>
+                    <p id="pickerDesc" style="font-size:0.85rem; color:var(--text); margin-top:0.5rem; line-height:1.5;"></p>
+                </div>
+
+                <!-- Кнопки дат -->
+                <div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Выберите дату:</p>
+                    <div id="pickerDates" style="display:flex; gap:0.5rem; flex-wrap:wrap;"></div>
+                </div>
+
+                <!-- Кнопки времени -->
+                <div id="pickerTimesBlock" style="display:none;">
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Выберите время:</p>
+                    <div id="pickerTimes" style="display:flex; gap:0.5rem; flex-wrap:wrap;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+function markFilmChanged(el) {
+    const row = el.closest('tr');
+    const id = row.dataset.filmId;
+    console.log('filmId:', id); // проверяем что id есть
+    const btn = document.getElementById('film-btn-' + id);
+    console.log('btn:', btn); // проверяем что кнопка находится
+    if (!btn) return;
+    btn.textContent = '💾';
+    btn.className = 'btn btn--primary btn--icon';
+    row.dataset.changed = '1';
+}
+
+function submitFilmRow(id) {
+    const row = document.querySelector(`tr[data-film-id="${id}"]`);
+    if (row.dataset.changed === '1') {
+        const title = row.querySelector('[name="title"]').value.trim();
+        const duration = row.querySelector('[name="duration"]').value.trim();
+        if (!title) { alert('Название не может быть пустым'); return; }
+        if (!duration) { alert('Укажите длительность'); return; }
+        if (!confirm('Сохранить изменения фильма?')) return;
+        const form = document.getElementById('film-form-save-' + id);
+        form.querySelector('.hidden-title').value = title;
+        form.querySelector('.hidden-genre').value = row.querySelector('[name="genre"]').value;
+        form.querySelector('.hidden-duration').value = duration;
+        form.submit();
+    } else {
+        if (!confirm('Удалить фильм?')) return;
+        document.getElementById('film-form-delete-' + id).submit();
+    }
+}
+
+function switchPersonalTab(tab, btn) {
+    document.querySelectorAll('.personal-section').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.personal-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).style.display = 'flex';
+    btn.classList.add('active');
+    localStorage.setItem('personalTab', tab);
+
+    // Показываем кнопку только на нужных вкладках
+    const addBlock = document.getElementById('addBlock');
+    const addHint = document.getElementById('addHint');
+    if (addBlock) {
+        const hints = {
+            'films': 'Добавить фильм:',
+            'halls': 'Добавить зал:',
+            'sessions': 'Добавить сеанс:',
+            'promotions': 'Добавить акцию:'
+        };
+        if (['films', 'halls', 'sessions', 'promotions'].includes(tab)) {
+            addBlock.style.display = 'block';
+            addHint.textContent = hints[tab];
+        } else {
+            addBlock.style.display = 'none';
+        }
+    }
+}
+
+// Открываем вкладку из URL или localStorage
+const urlTab = new URLSearchParams(window.location.search).get('tab');
+if (urlTab) {
+    // Сохраняем в localStorage и убираем параметр из URL
+    localStorage.setItem('personalTab', urlTab);
+    history.replaceState(null, '', '/personal');
+}
+const savedTab = localStorage.getItem('personalTab');
+if (savedTab) {
+    const btn = document.querySelector(`[onclick="switchPersonalTab('${savedTab}', this)"]`);
+    if (btn) switchPersonalTab(savedTab, btn);
+}
+
+function markChanged(el) {
+    const row = el.closest('tr');
+    const id = row.dataset.sessionId;
+    const btn = document.getElementById('btn-' + id);
+    btn.textContent = '💾';
+    btn.className = 'btn btn--primary btn--icon';
+    row.dataset.changed = '1';
+}
+
+function submitRow(id, btn) {
+    const row = document.querySelector(`tr[data-session-id="${id}"]`);
+    if (row.dataset.changed === '1') {
+        if (!confirm('Сохранить изменения сеанса?')) return;
+        const form = document.getElementById('form-save-' + id);
+        form.querySelector('.hidden-film_id').value = row.querySelector('[name="film_id"]').value;
+        form.querySelector('.hidden-hall_id').value = row.querySelector('[name="hall_id"]').value;
+        form.querySelector('.hidden-date').value = row.querySelector('[name="date"]').value;
+        form.querySelector('.hidden-time').value = row.querySelector('[name="time"]').value;
+        form.querySelector('.hidden-price').value = row.querySelector('[name="price"]').value;
+        form.submit();
+    } else {
+        if (!confirm('Удалить сеанс?')) return;
+        document.getElementById('form-delete-' + id).submit();
+    }
+}
+
+function handleAdd() {
+    const tab = localStorage.getItem('personalTab');
+    if (tab === 'films') openFilmModal();
+    else if (tab === 'halls') openHallModal();
+    else if (tab === 'sessions') openSessionModal();
+    else if (tab === 'promotions') openPromoModal();
+}
+
+function markHallChanged(el) {
+    const row = el.closest('tr');
+    const id = row.dataset.hallId;
+    const btn = document.getElementById('hall-btn-' + id);
+    btn.textContent = '💾';
+    btn.className = 'btn btn--primary btn--icon';
+    row.dataset.changed = '1';
+}
+
+function submitHallRow(id) {
+    const row = document.querySelector(`tr[data-hall-id="${id}"]`);
+    if (row.dataset.changed === '1') {
+        const name = row.querySelector('[name="name"]').value.trim();
+        if (!name) { alert('Название не может быть пустым'); return; }
+        if (!confirm('Сохранить изменения зала?')) return;
+        const form = document.getElementById('hall-form-save-' + id);
+        form.querySelector('.hidden-name').value = name;
+        form.querySelector('.hidden-format').value = row.querySelector('[name="format"]').value;
+        form.querySelector('.hidden-status').value = row.querySelector('[name="status"]').value;
+        form.querySelector('.hidden-capacity').value = row.querySelector('[name="capacity"]').value;
+        form.submit();
+    } else {
+        if (!confirm('Удалить зал?')) return;
+        document.getElementById('hall-form-delete-' + id).submit();
+    }
+}
+
+function openFilmModal() {
+    document.getElementById('filmAddModal').style.display = 'flex';
+}
+function closeFilmModal(e) {
+    if (!e || e.target === document.getElementById('filmAddModal')) {
+        document.getElementById('filmAddModal').style.display = 'none';
+    }
+}
+function previewPoster(input) {
+    const preview = document.getElementById('posterPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function validateFilmForm() {
+    const title = document.getElementById('filmTitle').value.trim();
+    const duration = document.getElementById('filmDuration').value.trim();
+    const msg = document.getElementById('filmFormMsg');
+    if (!title) { msg.textContent = 'Введите название'; msg.style.display = 'block'; return false; }
+    if (!duration) { msg.textContent = 'Введите длительность'; msg.style.display = 'block'; return false; }
+    return true;
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeFilmModal();
+});
+
+function openHallModal() {
+    document.getElementById('hallAddModal').style.display = 'flex';
+}
+function closeHallModal(e) {
+    if (!e || e.target === document.getElementById('hallAddModal')) {
+        document.getElementById('hallAddModal').style.display = 'none';
+    }
+}
+function validateHallForm() {
+    const name = document.getElementById('hallName').value.trim();
+    const rows = document.getElementById('hallRows').value.trim();
+    const seats = document.getElementById('hallSeats').value.trim();
+    const msg = document.getElementById('hallFormMsg');
+    if (!name) { msg.textContent = 'Введите название'; msg.style.display = 'block'; return false; }
+    if (!rows) { msg.textContent = 'Введите количество рядов'; msg.style.display = 'block'; return false; }
+    if (!seats) { msg.textContent = 'Введите количество мест в ряду'; msg.style.display = 'block'; return false; }
+    return true;
+}
+
+function openSessionModal() {
+    document.getElementById('sessionAddModal').style.display = 'flex';
+}
+function closeSessionModal(e) {
+    if (!e || e.target === document.getElementById('sessionAddModal')) {
+        document.getElementById('sessionAddModal').style.display = 'none';
+    }
+}
+function validateSessionForm() {
+    const date = document.getElementById('sessionDate').value;
+    const time = document.getElementById('sessionTime').value;
+    const price = document.getElementById('sessionPrice').value;
+    const msg = document.getElementById('sessionFormMsg');
+    if (!date) { msg.textContent = 'Выберите дату'; msg.style.display = 'block'; return false; }
+    if (!time) { msg.textContent = 'Выберите время'; msg.style.display = 'block'; return false; }
+    if (!price) { msg.textContent = 'Укажите стоимость'; msg.style.display = 'block'; return false; }
+    return true;
+}
+
+function filterFilmsGrid(query) {
+    document.querySelectorAll('.film-sell-card').forEach(card => {
+        card.style.display = card.dataset.title.includes(query.toLowerCase()) ? '' : 'none';
+    });
+}
+
+let pickerDatesData = {};
+
+function selectFilmForSale(filmId) {
+    document.getElementById('sessionPickerModal').style.display = 'flex';
+    document.getElementById('pickerTitle').textContent = '...';
+    document.getElementById('pickerDates').innerHTML = '';
+    document.getElementById('pickerTimesBlock').style.display = 'none';
+
+    fetch(`/api/film/${filmId}`)
+    .then(r => r.json())
+    .then(data => {
+        pickerDatesData = data.dates;
+
+        // Афиша
+        const poster = document.getElementById('pickerPoster');
+        const noPoster = document.getElementById('pickerNoPoster');
+        if (data.poster) {
+            poster.src = `/static/posters/${data.poster}`;
+            poster.style.display = 'block';
+            noPoster.style.display = 'none';
+        } else {
+            poster.style.display = 'none';
+            noPoster.style.display = 'flex';
+            noPoster.textContent = data.title[0].toUpperCase();
+        }
+
+        document.getElementById('pickerTitle').textContent = data.title;
+        document.getElementById('pickerGenre').textContent = data.genre;
+        document.getElementById('pickerDuration').textContent = data.duration + ' мин.';
+        document.getElementById('pickerDesc').textContent = data.description;
+
+        // Кнопки дат
+        const datesDiv = document.getElementById('pickerDates');
+        datesDiv.innerHTML = '';
+        if (!Object.keys(data.dates).length) {
+            datesDiv.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">Нет доступных сеансов</p>';
+            return;
+        }
+        Object.entries(data.dates).forEach(([dateStr, info]) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.innerHTML = `<span style="font-size:0.9rem; font-weight:600;">${info.label}</span><br>
+                             <span style="font-size:0.7rem; color:var(--text-muted);">${info.weekday}</span>`;
+            btn.style.cssText = 'padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-card); color:var(--text); cursor:pointer; text-align:center; min-width:60px;';
+            btn.dataset.date = dateStr;
+            btn.onclick = () => selectDate(dateStr, btn);
+            datesDiv.appendChild(btn);
+        });
+    });
+}
+
+function selectDate(dateStr, btn) {
+    // Подсветка активной даты
+    document.querySelectorAll('#pickerDates button').forEach(b => {
+        b.style.borderColor = 'var(--border)';
+        b.style.background = 'var(--bg-card)';
+    });
+
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.background = 'rgba(124,92,255,0.12)';
+
+    // Кнопки времени
+    const timesDiv = document.getElementById('pickerTimes');
+    timesDiv.innerHTML = '';
+
+    const sessions = pickerDatesData[dateStr].sessions;
+
+    sessions.forEach(s => {
+
+        // Контейнер кнопки + формата
+        const wrap = document.createElement('div');
+        wrap.style.cssText = `
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            gap:2px;
+        `;
+
+        // Кнопка времени
+        const btn = document.createElement('button');
+        btn.type = 'button';
+
+        btn.innerHTML = `
+            <span style="font-size:0.95rem; font-weight:600;">
+                ${s.time}
+            </span><br>
+            <span style="font-size:0.7rem; color:var(--text-muted);">
+                ${s.price} ₽
+            </span>
+        `;
+
+        btn.style.cssText = `
+            padding:8px 14px;
+            border:1px solid var(--border);
+            border-radius:var(--radius);
+            background:var(--bg-card);
+            color:var(--text);
+            cursor:pointer;
+            text-align:center;
+            min-width:80px;
+        `;
+
+        btn.onclick = () => {
+            closeSellSessionPicker();
+            openSellModal(s.id);
+        };
+
+        // Формат зала под кнопкой
+        const fmt = document.createElement('div');
+
+        fmt.textContent = s.format;
+
+        fmt.style.cssText = `
+            font-size:0.7rem;
+            color:var(--text-muted);
+            text-align:center;
+        `;
+
+        // Добавляем в контейнер
+        wrap.appendChild(btn);
+        wrap.appendChild(fmt);
+
+        // Добавляем контейнер
+        timesDiv.appendChild(wrap);
+    });
+
+    document.getElementById('pickerTimesBlock').style.display = 'block';
+}
+
+function closeSellSessionPicker(e) {
+    if (!e || e.target === document.getElementById('sessionPickerModal')) {
+        document.getElementById('sessionPickerModal').style.display = 'none';
+    }
+}
+
+function openPosterModal(filmId, poster) {
+    const modal = document.getElementById('posterModal');
+    const form = document.getElementById('posterForm');
+    form.action = `/admin/films/poster/${filmId}`;
+
+    const img = document.getElementById('currentPoster');
+    const noPoster = document.getElementById('noPoster');
+    if (poster) {
+        img.src = `/static/posters/${poster}`;
+        img.style.display = 'block';
+        noPoster.style.display = 'none';
+    } else {
+        img.style.display = 'none';
+        noPoster.style.display = 'block';
+    }
+    document.getElementById('newPosterPreview').style.display = 'none';
+    modal.style.display = 'flex';
+}
+function closePosterModal(e) {
+    if (!e || e.target === document.getElementById('posterModal')) {
+        document.getElementById('posterModal').style.display = 'none';
+    }
+}
+
+function previewNewPoster(input) {
+    const preview = document.getElementById('newPosterPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+let currentSessionId = null;
+let currentSessionPrice = 0;
+let selectedSeats = []; // массив {id, rowNum, seatNum}
+
+function filterBookingsByCode(val) {
+    const filter = val.toUpperCase().trim();
+    const rows = document.querySelectorAll('.booking-row');
+
+    rows.forEach(row => {
+        const codeCell = row.querySelector('.booking-code');
+        if (codeCell) {
+            const codeText = codeCell.textContent || codeCell.innerText;
+            // Если код содержит введенный текст, показываем строку, иначе скрываем
+            if (codeText.toUpperCase().indexOf(filter) > -1) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        }
+    });
+}
+
+function openSellModal(sessionId) {
+    currentSessionId = sessionId;
+    selectedSeatId = null;
+    selectedSeats = [];
+    document.getElementById('clientEmail').value = '';
+    document.getElementById('promoSelect').value = '';
+    document.getElementById('paymentMethodSelect').value = '';
+    updateSaleTotalPrice();
+    document.getElementById('sellMsg').style.display = 'none';
+    document.getElementById('seatMap').innerHTML = '<p style="color:var(--text-muted)">Загрузка...</p>';
+    document.getElementById('sellModal').style.display = 'flex';
+    const confirmBtn = document.getElementById('confirmSaleBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Принять оплату';
+
+    fetch(`/api/session_seats/${sessionId}`)
+    .then(r => r.json())
+    .then(data => {
+        currentSessionPrice = data.price;
+        document.getElementById('sellModalTitle').textContent = data.title;
+        document.getElementById('sellInfo').innerHTML =
+            `<b>${data.hall_name}</b><br>${data.date.split('-').reverse().join('.')} в ${data.time}<br>Цена: <b style="color:var(--accent)">${data.price} ₽</b>`;
+        renderSeatMap(data.rows);
+    });
+}
+
+function renderSeatMap(rows) {
+    const map = document.getElementById('seatMap');
+    map.innerHTML = '';
+    const sortedRows = Object.keys(rows).map(Number).sort((a,b) => a-b);
+    sortedRows.forEach(rowNum => {
+        const rowDiv = document.createElement('div');
+        rowDiv.style.cssText = 'display:flex; align-items:center; gap:4px; width:100%;';
+
+        // Номер ряда слева
+        const labelL = document.createElement('span');
+        labelL.textContent = rowNum;
+        labelL.style.cssText = 'width:16px; text-align:right; font-size:0.75rem; color:var(--text-muted); flex-shrink:0;';
+        rowDiv.appendChild(labelL);
+
+        const seatsDiv = document.createElement('div');
+        seatsDiv.style.cssText = 'display:flex; gap:4px; flex:1; justify-content:center;';
+
+        rows[rowNum].forEach(seat => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = seat.num;
+            btn.style.cssText = `width:32px; height:32px; border-radius:4px; border:none; cursor:${seat.booked ? 'not-allowed' : 'pointer'};
+                font-size:0.7rem; font-weight:600;
+                background:${seat.booked ? 'var(--border)' : 'var(--bg-card)'};
+                color:${seat.booked ? 'var(--text-muted)' : 'var(--text)'};
+                border: 1px solid ${seat.booked ? 'transparent' : 'var(--accent)'};`;
+            if (!seat.booked) {
+                btn.onclick = () => selectSeat(seat.id, rowNum, seat.num, btn);
+            }
+            btn.id = `seat-${seat.id}`;
+            seatsDiv.appendChild(btn);  // <- теперь в seatsDiv
+        });
+
+rowDiv.appendChild(seatsDiv);
+
+        // Номер ряда справа
+        const labelR = document.createElement('span');
+        labelR.textContent = rowNum;
+        labelR.style.cssText = 'width:16px; font-size:0.75rem; color:var(--text-muted); flex-shrink:0;';
+        rowDiv.appendChild(labelR);
+
+        map.appendChild(rowDiv);
+    });
+}
+
+function selectSeat(seatId, rowNum, seatNum, btn) {
+    const idx = selectedSeats.findIndex(s => s.id === seatId);
+    if (idx === -1) {
+        // Добавляем место
+        selectedSeats.push({id: seatId, rowNum, seatNum});
+        btn.style.background = 'var(--accent)';
+        btn.style.color = 'var(--bg)';
+    } else {
+        // Убираем место
+        selectedSeats.splice(idx, 1);
+        btn.style.background = 'var(--bg-card)';
+        btn.style.color = 'var(--text)';
+    }
+    // Обновляем инфо
+    if (selectedSeats.length > 0) {
+        document.getElementById('selectedSeatText').textContent =
+            selectedSeats.map(s => `Ряд ${s.rowNum}, место ${s.seatNum}`).join(' | ');
+        document.getElementById('selectedSeatText').style.display = 'block';
+    } else {
+        document.getElementById('selectedSeatText').style.display = 'none';
+    }
+    updateSaleTotalPrice();
+    document.getElementById('confirmSaleBtn').disabled = selectedSeats.length === 0;
+}
+
+function confirmSale() {
+    const email = document.getElementById('clientEmail').value.trim();
+    const msg = document.getElementById('sellMsg');
+    const btn = document.getElementById('confirmSaleBtn');
+    const paymentMethod = document.getElementById('paymentMethodSelect').value;
+    const oldText = btn ? btn.textContent : 'Принять оплату';
+
+    function showSellMessage(text, color) {
+        if (!msg) return;
+        msg.textContent = text;
+        msg.style.color = color;
+        msg.style.display = 'block';
+    }
+
+    if (!selectedSeats.length) { showSellMessage('Выберите место', 'var(--danger)'); return; }
+    if (!email) { showSellMessage('Введите email клиента', 'var(--danger)'); return; }
+    if (!paymentMethod) { showSellMessage('Выберите способ оплаты', 'var(--danger)'); return; }
+
+    const formData = new FormData();
+    formData.append('session_id', currentSessionId);
+    formData.append('client_email', email);
+    formData.append('promo_id', document.getElementById('promoSelect').value);
+    formData.append('payment_method', paymentMethod);
+    selectedSeats.forEach(s => formData.append('seat_ids', s.id));
+
+    document.querySelectorAll('#seatMap button').forEach(seatBtn => {
+        seatBtn.disabled = true;
+        seatBtn.style.opacity = '0.65';
+        seatBtn.style.pointerEvents = 'none';
+    });
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Отправка билетов...';
+    }
+    if (msg) msg.style.display = 'none';
+
+    fetch('/admin/sell_ticket', { method: 'POST', body: formData })
+    .then(async r => {
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || 'Ошибка');
+        return data;
+    })
+    .then(data => {
+        showSellMessage(data.message || 'Билеты оплачены и отправлены на указанную почту', 'var(--success)');
+        selectedSeats.forEach(s => {
+            const seatBtn = document.getElementById(`seat-${s.id}`);
+            if (seatBtn) {
+                seatBtn.style.background = 'var(--border)';
+                seatBtn.style.color = 'var(--text-muted)';
+                seatBtn.onclick = null;
+                seatBtn.style.cursor = 'not-allowed';
+            }
+        });
+        selectedSeats = [];
+        document.getElementById('selectedSeatText').style.display = 'none';
+        setTimeout(() => {
+            document.getElementById('sellModal').style.display = 'none';
+        }, 900);
+    })
+    .catch(err => {
+        showSellMessage(err.message || 'Ошибка', 'var(--danger)');
+        document.querySelectorAll('#seatMap button').forEach(seatBtn => {
+            seatBtn.disabled = false;
+            seatBtn.style.opacity = '';
+            seatBtn.style.pointerEvents = '';
+        });
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = oldText;
+        }
+    });
+}
+
+function closeSellModal(e) {
+    if (!e || e.target === document.getElementById('sellModal')) {
+        document.getElementById('sellModal').style.display = 'none';
+    }
+}
+
+function openDescModal(filmId, desc) {
+    const modal = document.getElementById('descModal');
+    const form = document.getElementById('descForm');
+    form.action = `/admin/films/desc/${filmId}`;
+    document.getElementById('descText').value = desc;
+    modal.style.display = 'flex';
+}
+function closeDescModal(e) {
+    if (!e || e.target === document.getElementById('descModal')) {
+        document.getElementById('descModal').style.display = 'none';
+    }
+}
+
+function openPromoImageModal(promoId, image) {
+    const modal = document.getElementById('promoImageModal');
+    const form = document.getElementById('promoImageForm');
+    form.action = `/admin/promotions/image/${promoId}`;
+    const img = document.getElementById('currentPromoImage');
+    if (image) {
+        img.src = `/static/promotions/${image}`;
+        img.style.display = 'block';
+        document.getElementById('noPromoImage').style.display = 'none';
+    } else {
+        img.style.display = 'none';
+        document.getElementById('noPromoImage').style.display = 'block';
+    }
+    modal.style.display = 'flex';
+}
+function closePromoImageModal(e) {
+    if (!e || e.target === document.getElementById('promoImageModal'))
+        document.getElementById('promoImageModal').style.display = 'none';
+}
+
+function openPromoDescModal(promoId, desc) {
+    const modal = document.getElementById('promoDescModal');
+    document.getElementById('promoDescForm').action = `/admin/promotions/desc/${promoId}`;
+    document.getElementById('promoDescText').value = desc;
+    modal.style.display = 'flex';
+}
+function closePromoDescModal(e) {
+    if (!e || e.target === document.getElementById('promoDescModal'))
+        document.getElementById('promoDescModal').style.display = 'none';
+}
+
+function openPromoModal() {
+    document.getElementById('promoAddModal').style.display = 'flex';
+}
+function closePromoModal(e) {
+    if (!e || e.target === document.getElementById('promoAddModal'))
+        document.getElementById('promoAddModal').style.display = 'none';
+}
+
+function markPromoChanged(el) {
+    const row = el.closest('tr');
+    const id = row.dataset.promoId;
+    const btn = document.getElementById('promo-btn-' + id);
+    btn.textContent = '💾';
+    btn.className = 'btn btn--primary btn--icon';
+    row.dataset.changed = '1';
+}
+
+function submitPromoRow(id) {
+    const row = document.querySelector(`tr[data-promo-id="${id}"]`);
+    if (row.dataset.changed === '1') {
+        const title = row.querySelector('[name="title"]').value.trim();
+        if (!title) { alert('Заголовок не может быть пустым'); return; }
+        if (!confirm('Сохранить изменения акции?')) return;
+        const form = document.getElementById('promo-form-save-' + id);
+        form.querySelector('.hidden-title').value = title;
+        form.querySelector('.hidden-discount').value = row.querySelector('[name="discount"]').value;
+        form.submit();
+    } else {
+        if (!confirm('Удалить акцию?')) return;
+        document.getElementById('promo-form-delete-' + id).submit();
+    }
+}
+
+function previewPromoAddImage(input) {
+    const preview = document.getElementById('promoAddImagePreview');
+    if (preview && input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+function previewPromoEditImage(input) {
+    const preview = document.getElementById('promoImagePreview');
+    if (preview && input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function applyPromo() {
+    updateSaleTotalPrice();
+}
+
+function updateSaleTotalPrice() {
+    const select = document.getElementById('promoSelect');
+    const opt = select ? select.options[select.selectedIndex] : null;
+    const discount = parseInt(opt?.dataset.discount || 0);
+    const priceText = document.getElementById('finalPriceText');
+    const seatCount = selectedSeats ? selectedSeats.length : 0;
+    const basePrice = Number(currentSessionPrice || 0);
+    const oneSeatPrice = Math.round(basePrice * (1 - discount / 100));
+    const totalPrice = oneSeatPrice * seatCount;
+
+    priceText.textContent = `${totalPrice} ₽`;
+    priceText.style.display = 'block';
+    priceText.style.color = totalPrice > 0 ? 'var(--accent)' : 'var(--text-muted)';
+}
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,72 @@
+/* ─── КНОПКИ ─── */
+.btn {
+    display: flex;            /* Включаем гибкую верстку */
+    align-items: center;      /* Центрируем текст по вертикали */
+    justify-content: center;   /* Центрируем текст по горизонтали */
+    text-align: center;
+
+    width: 100%;              /* Если кнопка должна быть на всю ширину */
+    height: 45px;             /* Можно задать фиксированную высоту для аккуратности */
+
+    padding: 0 20px;          /* Убираем верхний/нижний паддинг, если используем высоту и flex */
+
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.btn--primary {
+    background: var(--accent);
+    color: #000;
+    font-weight: bold;
+}
+.btn--primary:hover { background: var(--accent-hover); color: #000; }
+
+.btn--outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+.btn--outline:hover { border-color: var(--text-muted); color: var(--text); }
+
+.btn--danger {
+    background: var(--danger);
+    color: #fff;
+}
+.btn--danger:hover { background: #c94040; color: #fff; }
+
+.btn--sm { padding: 0.35rem 0.85rem; font-size: 0.82rem; }
+.btn--full { width: 100%; justify-content: center; }
+
+/* Стили для заблокированной кнопки */
+.btn:disabled {
+    background-color: var(--border) !important;
+    color: var(--text-dim) !important;
+    border-color: var(--border) !important;
+}
+
+/* Иконки-кнопки */
+.btn--icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    border: none;
+}
+
+.btn--success {
+    background: var(--success);
+    color: #000;
+    border: none;
+}
+.btn--success:hover {
+    opacity: 0.85;
+}

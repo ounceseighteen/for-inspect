@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Сеансы — Мир Кино{% endblock %}
+
+{% block admin_content %}
+<div style="margin-bottom:1.5rem;">
+    <h1 style="font-size:1.6rem; font-weight:800; margin-bottom:0.35rem;">Сеансы</h1>
+    <p style="color:var(--text-muted); font-size:0.9rem;">Редактирование сеансов — во вкладке «Сеансы» личного кабинета.</p>
+    <a href="{{ url_for('personal') + '?tab=sessions' }}" class="btn btn--outline btn--sm">Открыть редактор</a>
+</div>
+
+<div style="display:flex; gap:40px; align-items:flex-start;">
+    <!-- Список сеансов -->
+    <div style="flex:2; min-width:0;">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Фильм</th>
+                    <th>Дата</th>
+                    <th>Время</th>
+                    <th>Зал</th>
+                    <th>Цена</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sessions %}
+                <tr>
+                    <td>{{ s.title }}</td>
+                    <td>{{ s.date.split('-')|reverse|join('.') }}</td>
+                    <td>{{ s.time }}</td>
+                    <td>{{ s.hall_name }}</td>
+                    <td>{{ s.price|int }} ₽</td>
+                    <td>
+                        <form method="post" action="{{ url_for('admin_session_delete', session_id=s.id) }}" style="display:inline;"
+                              onsubmit="return confirm('Удалить сеанс?')">
+                            <button type="submit" class="btn btn--danger btn--icon" title="Удалить">🗑️</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">Сеансов пока нет</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Форма добавления -->
+    <div style="flex:1; min-width:260px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+        <h2 style="font-size:1.05rem; font-weight:700; margin-bottom:1rem;">Добавить сеанс</h2>
+        <form method="post" action="{{ url_for('admin_session_add') }}">
+            <select class="form-input" name="film_id" required style="margin-bottom:0.5rem;">
+                <option value="" disabled selected>Фильм…</option>
+                {% for f in films %}<option value="{{ f.id }}">{{ f.title }}</option>{% endfor %}
+            </select>
+            <select class="form-input" name="hall_id" required style="margin-bottom:0.5rem;">
+                <option value="" disabled selected>Зал…</option>
+                {% for h in halls %}<option value="{{ h.id }}">{{ h.name }} ({{ h.format }})</option>{% endfor %}
+            </select>
+            <input type="date" class="form-input" name="date" required style="margin-bottom:0.5rem;">
+            <input type="time" class="form-input" name="time" required style="margin-bottom:0.5rem;">
+            <input type="number" class="form-input" name="price" placeholder="Цена, ₽" required min="0" style="margin-bottom:0.5rem;">
+            <button type="submit" class="btn btn--primary btn--full">Добавить сеанс</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

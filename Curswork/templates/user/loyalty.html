@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+{% block title %}Бонусная карта — Мир Кино{% endblock %}
+
+{% block content %}
+<div style="margin-top:1.5rem; margin-bottom:1.5rem;">
+    <h1 style="font-size:2rem; font-weight:800; margin-bottom:0.35rem;">Бонусная карта</h1>
+</div>
+
+{% if not user %}
+<div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:2rem; text-align:center;">
+    <h2 style="font-size:1.4rem; font-weight:700; margin-bottom:0.7rem;">Войдите, чтобы выпустить бонусную карту</h2>
+    <p style="color:var(--text-muted); margin-bottom:1.2rem;">После входа карта будет доступна в личном кабинете и при покупке билетов.</p>
+    <button class="btn btn--primary" onclick="openAuthModal()">Войти</button>
+</div>
+
+{% elif user.role != 'client' %}
+<div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:2rem; text-align:center;">
+    <h2 style="font-size:1.4rem; font-weight:700; margin-bottom:0.7rem;">Бонусная карта доступна клиентам</h2>
+    <p style="color:var(--text-muted); margin:0;">Для администратора и кассира управление билетами находится в личном кабинете.</p>
+</div>
+
+{% elif not card %}
+<div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:1.5rem; align-items:stretch;">
+    <div style="background:linear-gradient(135deg, rgba(124,92,255,0.18), rgba(255,255,255,0.03)); border:1px solid rgba(124,92,255,0.35); border-radius:24px; padding:2rem; min-height:260px; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden; position:relative;">
+        <div style="position:absolute; right:-50px; top:-50px; width:180px; height:180px; border-radius:50%; background:rgba(124,92,255,0.18);"></div>
+        <div>
+            <h2 style="font-size:2rem; font-weight:800; margin:0 0 0.6rem;">Выпустите карту лояльности</h2>
+            <p style="color:var(--text-muted); line-height:1.7; max-width:620px; margin:0;">Карта позволит пополнять баланс, оплачивать билеты бонусами и получать кешбэк обратно на карту после таких покупок.</p>
+        </div>
+        <div style="margin-top:1.5rem;">
+            <button type="button" class="btn btn--primary" onclick="sendLoyaltyCode()">Выпустить карту</button>
+        </div>
+    </div>
+
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem;">
+        <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:1rem;">Как это работает</h3>
+        <div style="display:flex; flex-direction:column; gap:0.9rem; color:var(--text-muted); font-size:0.9rem; line-height:1.5;">
+            <div>1 бонус = 1 ₽.</div>
+            <div>Карту можно пополнить на этой странице.</div>
+            <div>Банковской картой можно пополнить баланс бонусной карты.</div>
+            <div>При оплате билета бонусной картой сумма списывается с баланса, а кешбэк возвращается обратно.</div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div style="display:grid; grid-template-columns:1.1fr 0.9fr; gap:1.5rem; align-items:stretch;">
+    <div style="background:linear-gradient(135deg, rgba(124,92,255,0.22), rgba(74,144,217,0.10)); border:1px solid rgba(124,92,255,0.38); border-radius:24px; padding:2rem; min-height:280px; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;">
+        <div style="position:absolute; right:-60px; top:-60px; width:220px; height:220px; border-radius:50%; background:rgba(124,92,255,0.18);"></div>
+        <div style="position:absolute; right:30px; bottom:25px; font-size:6rem; font-weight:900; color:rgba(255,255,255,0.04);">{{ card.level }}</div>
+
+        <div style="position:relative; z-index:1; display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
+            <div>
+                <div style="font-size:0.8rem; color:var(--text-muted); letter-spacing:0.14em; margin-bottom:0.6rem;">Фамилия Имя Отчество</div>
+                <h2 style="font-size:1.5rem; font-weight:800; margin:0;">{{ user.name }}</h2>
+            </div>
+        </div>
+
+        <div style="position:relative; z-index:1;">
+            <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.35rem;">Номер карты</div>
+            <div style="font-size:1.25rem; font-weight:700; letter-spacing:0.08em;">{{ card.card_number }}</div>
+        </div>
+
+        <div style="position:relative; z-index:1; display:flex; justify-content:space-between; align-items:flex-end; gap:1rem;">
+            <div>
+                <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.35rem;">Баланс</div>
+                <div style="font-size:2.2rem; font-weight:900; color:var(--accent);">{{ card.bonus_balance }}</div>
+            </div>
+            <div style="
+                text-align:right;
+                font-size:1.05rem;
+                color:var(--text);
+                font-weight:700;
+            ;">
+                Кешбэк
+                {% if card.level == 'Platinum' %}
+                    15%
+                {% elif card.level == 'Gold' %}
+                    10%
+                {% elif card.level == 'Silver' %}
+                    5%
+                {% else %}
+                    3%
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.4rem;">Билетов по карте</div>
+            <div style="font-size:1.7rem; font-weight:800;">{{ stats.paid_tickets }}</div>
+        </div>
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.4rem;">Покупки по карте</div>
+            <div style="font-size:1.7rem; font-weight:800;">{{ card.total_spent|int }} ₽</div>
+        </div>
+        <div style="grid-column:1 / -1; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.4rem;">Следующий уровень</div>
+            {% if next_level %}
+            <div style="font-size:1rem; line-height:1.6;">До уровня <b style="color:var(--accent);">{{ next_level.name }}</b> осталось оплатить бонусной картой на <b>{{ next_level.left }} ₽</b></div>
+            {% else %}
+            <div style="font-size:1rem; line-height:1.6; color:var(--accent); font-weight:700;">У вас максимальный уровень карты</div>
+            {% endif %}
+        </div>
+        <button type="button" class="btn btn--primary btn--full" style="grid-column:1 / -1;" onclick="openTopupModal()">Пополнить баланс</button>
+    </div>
+</div>
+{% endif %}
+
+<section class="section" style="margin-top:2rem;">
+    <div class="section__header">
+        <h2 class="section__title">Уровни карты</h2>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:1rem;">
+        {% for lvl in levels %}
+        <div style="background:var(--bg-card); border:1px solid {% if card and card.level == lvl.name %}var(--accent){% else %}var(--border){% endif %}; border-radius:var(--radius); padding:1.2rem;">
+            <div style="font-size:1.05rem; font-weight:800; margin-bottom:0.5rem; {% if card and card.level == lvl.name %}color:var(--accent);{% endif %}">{{ lvl.name }}</div>
+            <div style="font-size:0.85rem; color:var(--text-muted); line-height:1.5; margin-bottom:0.7rem;">{{ lvl.limit }}</div>
+            <div style="font-weight:800;">{{ lvl.cashback }}% кешбэк</div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+{% if card %}
+<section class="section" style="margin-top:2rem;">
+    <div class="section__header">
+        <h2 class="section__title">История</h2>
+    </div>
+    {% if history %}
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Время</th>
+                <th>Операция</th>
+                <th>Изменение</th>
+                <th>Баланс</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for h in history %}
+            <tr onclick="openHistoryDetail({{ h.id }})" style="cursor:pointer;" title="Подробнее об операции">
+                <td>{{ h.created_at[:10].split('-')|reverse|join('.') }}</td>
+                <td>{{ h.created_at[11:16] if h.created_at and h.created_at|length >= 16 else '—' }}</td>
+                <td>{{ h.operation }}</td>
+                <td>
+                    {% if h.amount > 0 %}
+                    <span style="color:var(--success);">+{{ h.amount }}</span>
+                    {% elif h.amount < 0 %}
+                    <span style="color:var(--danger);">{{ h.amount }}</span>
+                    {% else %}
+                    <span style="color:var(--text-muted);">0</span>
+                    {% endif %}
+                </td>
+                <td>{{ h.balance_after }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-muted); text-align:center; padding:2rem 0;">История пока пустая. Пополните карту или купите билет, чтобы появилась первая операция.</p>
+    {% endif %}
+</section>
+
+
+<div id="historyDetailModal" class="settings-overlay" style="display:none;" onclick="closeHistoryDetail(event)">
+    <div class="settings-modal" style="width:520px;">
+        <button class="settings-modal__close" onclick="closeHistoryDetail()">&times;</button>
+        <h2 class="settings-modal__title" id="historyDetailTitle">Операция</h2>
+        <div id="historyDetailBody" style="font-size:0.9rem; color:var(--text); line-height:1.8;"></div>
+    </div>
+</div>
+
+<div id="topupModal" class="settings-overlay" style="display:none;" onclick="closeTopupModal(event)">
+    <div class="settings-modal" style="width:420px;">
+        <button class="settings-modal__close" onclick="closeTopupModal()">&times;</button>
+        <h2 class="settings-modal__title">Пополнить баланс</h2>
+        <form method="post" action="{{ url_for('loyalty_topup') }}" class="settings-section">
+            <h3 class="settings-section__title">Сумма пополнения</h3>
+            <div class="input-group">
+                <input type="number" class="form-input" name="amount" min="1" step="1" placeholder="Например, 1000" required>
+            </div>
+            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">После пополнения сумма сразу появится на бонусной карте. 1 бонус = 1 ₽.</p>
+            <button type="submit" class="btn btn--primary btn--full">Пополнить</button>
+        </form>
+    </div>
+</div>
+
+<script>
+
+const historyDetails = {
+    {% for h in history %}
+    {{ h.id }}: {
+        operation: {{ h.operation|tojson }},
+        amount: {{ h.amount }},
+        balanceAfter: {{ h.balance_after }},
+        createdDate: {{ (h.created_at[:10].split('-')|reverse|join('.'))|tojson }},
+        createdTime: {{ (h.created_at[11:16] if h.created_at and h.created_at|length >= 16 else '—')|tojson }},
+        filmTitle: {{ (h.film_title or '')|tojson }},
+        sessionDate: {{ (h.session_date.split('-')|reverse|join('.') if h.session_date else '')|tojson }},
+        sessionTime: {{ (h.session_time or '')|tojson }},
+        hallName: {{ (h.hall_name or '')|tojson }},
+        rowNum: {{ h.row_num or 'null' }},
+        seatNum: {{ h.seat_num or 'null' }},
+        ticketPrice: {{ h.ticket_price or 0 }},
+        paymentMethod: {{ (h.payment_method or '')|tojson }}
+    },
+    {% endfor %}
+};
+
+function openHistoryDetail(id) {
+    const item = historyDetails[id];
+    if (!item) return;
+
+    const sign = item.amount > 0 ? '+' : '';
+    const amountColor = item.amount > 0 ? 'var(--success)' : (item.amount < 0 ? 'var(--danger)' : 'var(--text-muted)');
+    let details = `
+        <div><b>Дата операции:</b> ${item.createdDate} в ${item.createdTime}</div>
+        <div><b>Операция:</b> ${item.operation}</div>
+        <div><b>Изменение баланса:</b> <span style="color:${amountColor}; font-weight:800;">${sign}${item.amount}</span></div>
+        <div><b>Баланс:</b> ${item.balanceAfter}</div>
+    `;
+
+    if (item.filmTitle) {
+        details += `
+            <div style="height:1px; background:var(--border); margin:0.8rem 0;"></div>
+            <div><b>Фильм:</b> ${item.filmTitle}</div>
+            <div><b>Сеанс:</b> ${item.sessionDate} в ${item.sessionTime}</div>
+            <div><b>Зал:</b> ${item.hallName || '—'}</div>
+            <div><b>Место:</b> Ряд ${item.rowNum}, место ${item.seatNum}</div>
+            <div><b>Стоимость билета:</b> ${Math.round(Number(item.ticketPrice || 0))} ₽</div>
+        `;
+    } else if (item.operation === 'Пополнение карты') {
+        details += `
+            <div style="height:1px; background:var(--border); margin:0.8rem 0;"></div>
+            <div>Пополнение выполнено банковской картой на сумму <b>${item.amount} ₽</b>.</div>
+        `;
+    }
+
+    document.getElementById('historyDetailTitle').textContent = item.operation;
+    document.getElementById('historyDetailBody').innerHTML = details;
+    document.getElementById('historyDetailModal').style.display = 'flex';
+}
+
+function closeHistoryDetail(e) {
+    if (!e || e.target === document.getElementById('historyDetailModal')) {
+        document.getElementById('historyDetailModal').style.display = 'none';
+    }
+}
+
+function openTopupModal() {
+    document.getElementById('topupModal').style.display = 'flex';
+}
+function closeTopupModal(e) {
+    if (!e || e.target === document.getElementById('topupModal')) {
+        document.getElementById('topupModal').style.display = 'none';
+    }
+}
+</script>
+{% endif %}
+
+
+<div id="loyaltyCodeModal" class="settings-overlay" style="display:none;" onclick="closeLoyaltyCodeModal(event)">
+    <div class="settings-modal" style="width:420px;">
+        <button class="settings-modal__close" onclick="closeLoyaltyCodeModal()">&times;</button>
+        <h2 class="settings-modal__title">Подтверждение карты</h2>
+        <p style="font-size:0.9rem; color:var(--text-muted); line-height:1.6; margin-bottom:1rem;">
+            Мы отправили код на вашу почту. Введите его, чтобы выпустить бонусную карту.
+        </p>
+        <div class="input-group">
+            <input type="text" id="loyaltyVerifyCode" class="form-input" placeholder="Код из письма"
+                   inputmode="numeric" maxlength="6" style="text-align:center; font-size:1.2rem; letter-spacing:3px;">
+            <div id="loyaltyVerifyError" class="side-error"></div>
+        </div>
+        <button type="button" class="btn btn--primary btn--full" onclick="verifyLoyaltyCode()">Подтвердить</button>
+        <p id="loyaltyResendTimer" style="margin-top:12px; font-size:0.85rem; color:var(--text-muted); text-align:center;">
+            Отправить ещё раз через <span id="loyaltyTimerCount">60</span> сек
+        </p>
+        <a id="loyaltyResendLink" href="javascript:void(0)" onclick="sendLoyaltyCode()"
+           style="display:none; margin-top:12px; font-size:0.85rem; color:var(--accent); text-decoration:none; text-align:center;">
+            Отправить ещё раз
+        </a>
+    </div>
+</div>
+
+<script>
+let loyaltyResendInterval = null;
+
+function startLoyaltyTimer() {
+    if (loyaltyResendInterval) clearInterval(loyaltyResendInterval);
+    let seconds = 60;
+    const timer = document.getElementById('loyaltyResendTimer');
+    const count = document.getElementById('loyaltyTimerCount');
+    const link = document.getElementById('loyaltyResendLink');
+    if (timer) timer.style.display = 'block';
+    if (link) link.style.display = 'none';
+    if (count) count.textContent = seconds;
+    loyaltyResendInterval = setInterval(() => {
+        seconds--;
+        if (count) count.textContent = seconds;
+        if (seconds <= 0) {
+            clearInterval(loyaltyResendInterval);
+            loyaltyResendInterval = null;
+            if (timer) timer.style.display = 'none';
+            if (link) link.style.display = 'block';
+        }
+    }, 1000);
+}
+
+function sendLoyaltyCode() {
+    fetch('/send_loyalty_code', { method: 'POST' })
+    .then(async response => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Ошибка отправки кода');
+        return data;
+    })
+    .then(() => {
+        const modal = document.getElementById('loyaltyCodeModal');
+        const input = document.getElementById('loyaltyVerifyCode');
+        const err = document.getElementById('loyaltyVerifyError');
+        if (input) {
+            input.value = '';
+            input.style.borderColor = 'var(--border)';
+            input.addEventListener('input', () => {
+                input.value = input.value.replace(/\D/g, '');
+                if (err) err.style.display = 'none';
+                input.style.borderColor = 'var(--border)';
+            });
+        }
+        if (err) err.style.display = 'none';
+        modal.style.display = 'flex';
+        startLoyaltyTimer();
+    })
+    .catch(err => alert(err.message));
+}
+
+function verifyLoyaltyCode() {
+    const input = document.getElementById('loyaltyVerifyCode');
+    const errorBlock = document.getElementById('loyaltyVerifyError');
+    const formData = new FormData();
+    formData.append('code', input.value.trim());
+
+    fetch('/verify_loyalty_code', { method: 'POST', body: formData })
+    .then(async response => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Неверный код');
+        return data;
+    })
+    .then(data => {
+        window.location.href = data.redirect || '/loyalty';
+    })
+    .catch(err => {
+        errorBlock.textContent = err.message;
+        errorBlock.style.display = 'block';
+        input.style.borderColor = 'var(--danger)';
+    });
+}
+
+function closeLoyaltyCodeModal(e) {
+    if (!e || e.target === document.getElementById('loyaltyCodeModal')) {
+        document.getElementById('loyaltyCodeModal').style.display = 'none';
+    }
+}
+</script>
+
+{% endblock %}

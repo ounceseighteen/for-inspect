@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% block title %}Панель — Мир Кино{% endblock %}
+
+{% block admin_content %}
+<div class="personal-layout">
+    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+        <div class="personal-profile">
+            <div class="personal-profile__name">{{ user.name }}</div>
+            <div class="personal-profile__email">{{ user.email }}</div>
+            <div class="personal-profile__role personal-profile__role--admin">Администратор</div>
+        </div>
+        <a href="{{ url_for('personal') }}" class="btn btn--primary btn--full">Личный кабинет</a>
+        <a href="{{ url_for('admin_audit') }}" class="btn btn--outline btn--full">Журнал действий</a>
+    </div>
+
+    <div class="personal-content">
+        <div style="margin-bottom:1.5rem;">
+            <h1 style="font-size:1.6rem; font-weight:800; margin-bottom:0.35rem;">Панель управления</h1>
+            <p style="color:var(--text-muted); font-size:0.9rem;">Полное управление фильмами, залами, сеансами и бронированиями — во вкладках личного кабинета.</p>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(175px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+            <div class="stat-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.4rem;">Фильмы</div>
+                <div style="font-size:2rem; font-weight:800; color:var(--accent);">{{ stats.films }}</div>
+            </div>
+            <div class="stat-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.4rem;">Залы</div>
+                <div style="font-size:2rem; font-weight:800; color:var(--accent);">{{ stats.halls }}</div>
+            </div>
+            <div class="stat-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.4rem;">Сеансы</div>
+                <div style="font-size:2rem; font-weight:800; color:var(--accent);">{{ stats.sessions }}</div>
+            </div>
+            <div class="stat-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.4rem;">Бронирования</div>
+                <div style="font-size:2rem; font-weight:800; color:var(--accent);">{{ stats.bookings }}</div>
+            </div>
+            <div class="stat-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.4rem;">Клиенты</div>
+                <div style="font-size:2rem; font-weight:800; color:var(--accent);">{{ stats.users }}</div>
+            </div>
+            <div class="stat-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.4rem;">Кассиры</div>
+                <div style="font-size:2rem; font-weight:800; color:var(--accent);">{{ stats.cashiers }}</div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1.3fr 0.7fr; gap:1rem; margin-bottom:1.5rem;">
+            <!-- Продажи за 14 дней -->
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+                    <h2 style="font-size:1.05rem; font-weight:700; margin:0;">Продажи за 14 дней</h2>
+                    <span style="font-size:0.8rem; color:var(--text-muted);">{{ stats.bookings }} всего броней</span>
+                </div>
+                <div style="display:flex; align-items:flex-end; gap:6px; height:120px; overflow-x:auto; padding-bottom:0.3rem;">
+                    {% set maxv = sales_14|map(attribute='bookings')|max %}
+                    {% for d in sales_14 %}
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:4px; min-width:26px;">
+                        <div title="{{ d.bookings }} билетов"
+                             style="width:24px; border-radius:4px 4px 0 0;
+                                    background:{% if d.bookings == 0 %}var(--border){% else %}var(--accent){% endif %};
+                                    height:{{ (d.bookings * 100 / (maxv if maxv else 1))|round|int }}px;"></div>
+                        <span style="font-size:0.65rem; color:var(--text-muted);">{{ d.label }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Быстрые цифры -->
+            <div style="display:flex; flex-direction:column; gap:0.8rem;">
+                <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.2rem;">
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.3rem;">Выручка за неделю</div>
+                    <div style="font-size:1.6rem; font-weight:900; color:var(--accent);">{{ stats.week_revenue|int }} ₽</div>
+                </div>
+                <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.2rem;">
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.3rem;">Покупок сегодня</div>
+                    <div style="font-size:1.6rem; font-weight:900;">{{ stats.today_bookings }} <span style="font-size:0.85rem; color:var(--text-muted);">билетов</span></div>
+                </div>
+                <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.2rem;">
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.3rem;">Событий в журнале</div>
+                    <div style="font-size:1.6rem; font-weight:900;">{{ stats.audit_count }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+            <!-- Топ по кассе -->
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <h2 style="font-size:1.05rem; font-weight:700; margin-bottom:0.8rem;">Топ фильмов по кассе</h2>
+                {% if top_revenue %}
+                <table class="admin-table">
+                    <thead><tr><th>Фильм</th><th>Билетов</th><th>Сборы</th></tr></thead>
+                    <tbody>
+                        {% for f in top_revenue %}
+                        <tr>
+                            <td>{{ f.title }}</td>
+                            <td>{{ f.tickets }}</td>
+                            <td style="color:var(--accent); font-weight:700;">{{ f.revenue|int }} ₽</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p style="color:var(--text-muted); text-align:center; padding:1rem 0;">Проданных билетов пока нет</p>
+                {% endif %}
+            </div>
+
+            <!-- Посещаемость ближайшие 7 дней -->
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <h2 style="font-size:1.05rem; font-weight:700; margin-bottom:0.8rem;">Ближайшие 7 дней</h2>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    {% for d in next7 %}
+                    <div style="flex:1; min-width:70px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:0.6rem; text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-muted);">{{ d.name }}</div>
+                        <div style="font-size:1.1rem; font-weight:800;">{{ d.label }}</div>
+                        <div style="font-size:0.8rem; color:var(--accent); font-weight:600;">{{ d.bookings }} бил.</div>
+                        <div style="font-size:0.7rem; color:var(--text-muted);">{{ d.sessions }} сеансов</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Отзывы и рейтинги -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <h2 style="font-size:1.05rem; font-weight:700; margin-bottom:0.8rem;">Фильмы по рейтингу зрителей</h2>
+                {% if top_rated %}
+                <table class="admin-table">
+                    <thead><tr><th>Фильм</th><th>Рейтинг</th><th>Отзывов</th></tr></thead>
+                    <tbody>
+                        {% for f in top_rated %}
+                        <tr>
+                            <td>{{ f.title }}</td>
+                            <td style="color:var(--accent); font-weight:700;">★ {{ f.avg_rating }}</td>
+                            <td>{{ f.review_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p style="color:var(--text-muted); text-align:center; padding:1rem 0;">Отзывов пока нет</p>
+                {% endif %}
+            </div>
+
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem;">
+                <h2 style="font-size:1.05rem; font-weight:700; margin-bottom:0.8rem;">Последние отзывы</h2>
+                {% if recent_reviews %}
+                <div style="display:flex; flex-direction:column; gap:0.7rem;">
+                    {% for r in recent_reviews %}
+                    <div style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:0.7rem 0.9rem;">
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                            <span style="font-weight:700; font-size:0.85rem;">{{ r.user_name }}</span>
+                            <span style="color:var(--accent); font-size:0.85rem;">{{ '★' * r['rating'] }}</span>
+                            <span style="font-size:0.7rem; color:var(--text-dim); margin-left:auto;">{{ r.created_at[:16].replace('T', ' ') }}</span>
+                        </div>
+                        <div style="font-size:0.82rem; color:var(--text-muted); font-weight:600; margin-top:0.2rem;">{{ r.film_title }}</div>
+                        {% if r.comment %}
+                        <div style="font-size:0.82rem; color:var(--text); margin-top:0.25rem;">{{ r.comment }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color:var(--text-muted); text-align:center; padding:1rem 0;">Отзывов пока нет</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Последние события -->
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.2rem; margin-bottom:1.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+                <h2 style="font-size:1.05rem; font-weight:700; margin:0;">Последние события</h2>
+                <a href="{{ url_for('admin_audit') }}" style="font-size:0.85rem; color:var(--accent); text-decoration:none;">Все записи →</a>
+            </div>
+            {% if audit_recent %}
+            <table class="admin-table">
+                <thead><tr><th>Когда</th><th>Кто</th><th>Действие</th><th>Детали</th></tr></thead>
+                <tbody>
+                    {% for a in audit_recent %}
+                    <tr>
+                        <td style="white-space:nowrap;">{{ a.created_at[:16].replace('T', ' ') }}</td>
+                        <td>{{ a.user_name }}</td>
+                        <td>{{ a.action }}</td>
+                        <td style="color:var(--text-muted);">{{ a.details }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color:var(--text-muted); text-align:center; padding:1rem 0;">Журнал пуст</p>
+            {% endif %}
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:0.7rem; font-size:0.95rem;">
+            <a href="{{ url_for('admin_films') }}" class="btn btn--outline btn--full" style="text-align:left;">🎬 Фильмы — список и добавление</a>
+            <a href="{{ url_for('admin_halls') }}" class="btn btn--outline btn--full" style="text-align:left;">🏛 Залы — список и добавление</a>
+            <a href="{{ url_for('admin_sessions') }}" class="btn btn--outline btn--full" style="text-align:left;">🕐 Сеансы — список и добавление</a>
+            <a href="{{ url_for('admin_bookings') }}" class="btn btn--outline btn--full" style="text-align:left;">🎟 Бронирования — с фильтрами</a>
+            <a href="{{ url_for('admin_users') }}" class="btn btn--outline btn--full" style="text-align:left;">👥 Пользователи — роли и блокировки</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

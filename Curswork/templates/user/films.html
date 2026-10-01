@@ -1,0 +1,608 @@
+{% extends 'base.html' %}
+{% block title %}Все фильмы — Мир Кино{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-top:1.5rem; margin-bottom:1rem;">
+    <h1 style="font-size:1.6rem; font-weight:700; margin:0;">Все фильмы</h1>
+</div>
+
+<div style="display:flex; gap:2rem; align-items:flex-start; margin-top:0;">
+
+    <!-- Левая часть: сетка фильмов -->
+    <div style="flex:1; min-width:0;">
+        <div id="filmsGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:1rem;">
+            {% for film in films %}
+            <div class="film-sell-card" style="cursor:pointer; position:relative;"
+                 data-title="{{ film.title|lower }}"
+                 data-genre="{{ film.genre }}"
+                 data-tickets="{{ film.ticket_count }}"
+                 data-next="{{ film.next_session or 'zzz' }}"
+                 onclick="openFilmModal({{ film.id }}, false)">
+                {% if user and user.role == 'client' %}
+                <button type="button" class="fav-star {% if film.id in favorite_ids %}active{% endif %}"
+                        title="В избранное"
+                        onclick="toggleFavorite(event, {{ film.id }}, this)">{{ '★' if film.id in favorite_ids else '☆' }}</button>
+                {% endif %}
+                {% if film.poster %}
+                <img src="{{ url_for('static', filename='posters/' + film.poster) }}" alt="{{ film.title }}"
+                     style="width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:var(--radius);">
+                {% else %}
+                <div style="width:100%; aspect-ratio:2/3; background:var(--bg); border-radius:var(--radius);
+                            display:flex; align-items:center; justify-content:center;
+                            font-size:2rem; font-weight:700; color:var(--accent);">{{ film.title[0]|upper }}</div>
+                {% endif %}
+                <div style="margin-top:0.5rem; font-size:0.85rem; font-weight:600; text-align:center;">{{ film.title }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        <p id="noResults" style="display:none; color:var(--text-muted); text-align:center; margin-top:2rem;">Ничего не найдено</p>
+    </div>
+
+    <!-- Правая панель: поиск и фильтры -->
+    <div style="width:220px; flex-shrink:0; display:flex; flex-direction:column; gap:1rem; position:sticky; top:1.5rem;">
+        <div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.4rem;">Поиск</p>
+            <input type="text" id="searchInput" class="form-input" placeholder="Название фильма..."
+                   oninput="filterFilms()">
+        </div>
+        <div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.4rem;">Жанр</p>
+            <select id="genreSelect" class="form-input" onchange="filterFilms()">
+                <option value="">Все жанры</option>
+                {% for g in genres %}
+                <option value="{{ g.genre }}">{{ g.genre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.4rem;">Сортировка</p>
+            <select id="sortSelect" class="form-input" onchange="filterFilms()">
+                <option value="title">По названию</option>
+                <option value="popular">По популярности</option>
+                <option value="soon">Сначала с сеансами</option>
+            </select>
+        </div>
+        <button class="btn" style="border:1px solid var(--border); font-size:0.85rem;" onclick="resetFilters()">Сбросить</button>
+    </div>
+
+</div>
+
+<!-- Модалки из index.html — копируем те же две -->
+<!-- Модалка выбора фильма/даты/времени -->
+<div id="cfPickerModal" class="settings-overlay" style="display:none;" onclick="cfClosePickerModal(event)">
+    <div class="settings-modal" style="width:650px; max-height:90vh; overflow-y:auto;">
+        <button class="settings-modal__close" onclick="cfClosePickerModal()">&times;</button>
+        <div style="display:flex; gap:1.5rem;">
+            <div style="width:160px; flex-shrink:0;">
+                <img id="cfPoster" src="" alt="" style="width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:var(--radius); display:none;">
+                <div id="cfNoPoster" style="width:100%; aspect-ratio:2/3; background:var(--bg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; font-size:2.5rem; font-weight:700; color:var(--accent);"></div>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:1rem;">
+                <div>
+                    <h3 id="cfTitle" style="font-size:1.2rem; font-weight:700; margin-bottom:0.3rem;"></h3>
+                    <p id="cfGenre" style="font-size:0.85rem; color:var(--text-muted);"></p>
+                    <p id="cfDuration" style="font-size:0.85rem; color:var(--text-muted);"></p>
+                    <p id="cfDesc" style="font-size:0.85rem; color:var(--text); margin-top:0.5rem; line-height:1.5;"></p>
+                </div>
+                <div id="cfDatesBlock">
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Выберите дату:</p>
+                    <div id="cfDates" style="display:flex; gap:0.5rem; flex-wrap:wrap;"></div>
+                </div>
+                <div id="cfTimesBlock" style="display:none;">
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Выберите время:</p>
+                    <div id="cfTimes" style="display:flex; gap:0.5rem; flex-wrap:wrap;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка схемы зала -->
+<div id="cfSeatModal" class="settings-overlay" style="display:none;" onclick="cfCloseSeatModal(event)">
+    <div class="settings-modal" style="width:700px; max-height:90vh; overflow-y:auto;">
+        <button class="settings-modal__close" onclick="cfCloseSeatModal()">&times;</button>
+        <h2 class="settings-modal__title" id="cfSeatTitle"></h2>
+        <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
+            <div style="flex:1; min-width:300px;">
+                <div style="background:var(--text-muted); color:var(--bg); text-align:center;
+                            padding:6px; border-radius:4px; margin-bottom:4rem; font-size:0.8rem;">ЭКРАН</div>
+                <div id="cfSeatMap" style="display:flex; flex-direction:column; gap:6px; align-items:center;"></div>
+                <div style="display:flex; gap:1rem; margin-top:0.8rem; font-size:0.75rem; color:var(--text-muted); justify-content:center;">
+                    <span><span style="display:inline-block; width:14px; height:14px; background:var(--bg-card); border:1px solid var(--accent); border-radius:3px; vertical-align:middle;"></span> Свободно</span>
+                    <span><span style="display:inline-block; width:14px; height:14px; background:var(--accent); border-radius:3px; vertical-align:middle;"></span> Выбрано</span>
+                    <span><span style="display:inline-block; width:14px; height:14px; background:var(--border); border-radius:3px; vertical-align:middle;"></span> Занято</span>
+                </div>
+            </div>
+            <div style="width:200px; display:flex; flex-direction:column; gap:1rem;">
+                <div id="cfSeatInfo" style="font-size:0.85rem; color:var(--text-muted); line-height:1.8;"></div>
+                <p id="cfSelectedSeatText" style="font-size:0.85rem; color:var(--text); display:none;"></p>
+                {% if promotions %}
+                <div id="cfPromoBlock">
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Акция</p>
+                    <select class="form-input" id="cfPromoSelect" onchange="cfApplyPromo()">
+                        <option value="" data-discount="0">Без акции</option>
+                        {% for p in promotions %}
+                        <option value="{{ p.id }}" data-discount="{{ p.discount }}">{{ p.title }} −{{ p.discount }}%</option>
+                        {% endfor %}
+                    </select>
+</div>
+                {% endif %}
+                {% if user %}
+                <div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Способ оплаты</p>
+                    <select class="form-input" id="cfPaymentMethod">
+                        <option value="">Не выбран</option>
+                        <option value="bank">Банковской картой</option>
+                        <option value="bonus">Бонусной картой</option>
+                    </select>
+                </div>
+                <div id="cfTotalBox" style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:0.8rem;">
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.25rem;">Итого</div>
+                    <div id="cfFinalPriceText" style="font-size:1.4rem; font-weight:900; color:var(--accent);">0 ₽</div>
+                </div>
+
+                <p id="cfMsg" style="display:none; font-size:0.8rem;"></p>
+                <button id="cfBtnPay" class="btn btn--primary btn--full" onclick="cfConfirm('pay')" disabled>Купить билет</button>
+                <button id="cfBtnBook" class="btn btn--full" style="border:1px solid var(--border);" onclick="cfConfirm('book')" disabled>Забронировать</button>
+                <p style="font-size:0.72rem; color:var(--text-muted); text-align:center;">Бронь действует 30 минут до начала сеанса</p>
+                {% else %}
+                <button id="cfBtnPay" style="display:none;" disabled></button>
+                <button id="cfBtnBook" style="display:none;" disabled></button>
+                <button class="btn btn--primary btn--full" onclick="window.location.href='/?login=1'">Войдите чтобы купить билет</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+let cfDatesData = {};
+let cfSelectedSeatId = null;
+let cfSelectedSessionId = null;
+let cfCurrentSessionPrice = 0;
+const cfIsLoggedIn = {{ 'true' if user else 'false' }};
+const cfIsClient = {{ 'true' if user and user.role == 'client' else 'false' }};
+
+function toggleFavorite(event, filmId, btn) {
+    event.stopPropagation();
+    if (!cfIsClient) return;
+    fetch(`/api/favorite/${filmId}`, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+        btn.classList.toggle('active', !!data.favorite);
+        btn.textContent = data.favorite ? '★' : '☆';
+    })
+    .catch(() => {});
+}
+
+function openFilmModal(filmId, todayOnly) {
+    cfSelectedSeatId = null;
+    cfSelectedSessionId = null;
+    document.getElementById('cfTimesBlock').style.display = 'none';
+    document.getElementById('cfDates').innerHTML = '';
+    document.getElementById('cfTimes').innerHTML = '';
+    document.getElementById('cfPickerModal').style.display = 'flex';
+
+    fetch(`/api/film/${filmId}`)
+    .then(r => r.json())
+    .then(data => {
+        cfDatesData = data.dates;
+
+        if (data.poster) {
+            document.getElementById('cfPoster').src = `/static/posters/${data.poster}`;
+            document.getElementById('cfPoster').style.display = 'block';
+            document.getElementById('cfNoPoster').style.display = 'none';
+        } else {
+            document.getElementById('cfPoster').style.display = 'none';
+            document.getElementById('cfNoPoster').style.display = 'flex';
+            document.getElementById('cfNoPoster').textContent = data.title[0].toUpperCase();
+        }
+
+        document.getElementById('cfTitle').textContent = data.title;
+        document.getElementById('cfGenre').textContent = data.genre;
+        document.getElementById('cfDuration').textContent = data.duration + ' мин.';
+        document.getElementById('cfDesc').textContent = data.description;
+
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+        if (todayOnly) {
+            document.getElementById('cfDatesBlock').style.display = 'none';
+            if (data.dates[today]) {
+                cfShowTimes(data.dates[today].sessions);
+            } else {
+                document.getElementById('cfTimesBlock').style.display = 'block';
+                document.getElementById('cfTimes').innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">Сеансов на сегодня нет</p>';
+            }
+        } else {
+            document.getElementById('cfDatesBlock').style.display = 'block';
+            const datesDiv = document.getElementById('cfDates');
+            datesDiv.innerHTML = '';
+            if (!Object.keys(data.dates).length) {
+                datesDiv.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">Нет доступных сеансов</p>';
+                return;
+            }
+            Object.entries(data.dates).forEach(([dateStr, info]) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.innerHTML = `<span style="font-size:0.9rem; font-weight:600;">${info.label}</span><br>
+                                 <span style="font-size:0.7rem; color:var(--text-muted);">${info.weekday}</span>`;
+                btn.style.cssText = 'padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-card); color:var(--text); cursor:pointer; text-align:center; min-width:60px;';
+                btn.onclick = () => {
+                    document.querySelectorAll('#cfDates button').forEach(b => {
+                        b.style.borderColor = 'var(--border)';
+                        b.style.background = 'var(--bg-card)';
+                    });
+                    btn.style.borderColor = 'var(--accent)';
+                    btn.style.background = 'rgba(124,92,255,0.12)';
+                    cfShowTimes(info.sessions);
+                };
+                datesDiv.appendChild(btn);
+            });
+        }
+    });
+}
+
+function cfShowTimes(sessions) {
+    const timesDiv = document.getElementById('cfTimes');
+    timesDiv.innerHTML = '';
+    document.getElementById('cfTimesBlock').style.display = 'block';
+
+    sessions.forEach(s => {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:2px;';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.innerHTML = `<span style="font-size:0.95rem; font-weight:600;">${escapeHtml(s.time)}</span><br>
+                         <span style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(s.price)} ₽</span>`;
+        btn.style.cssText = 'padding:8px 14px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-card); color:var(--text); cursor:pointer; text-align:center; min-width:80px;';
+        btn.onclick = () => {
+            document.querySelectorAll('#cfTimes button').forEach(b => {
+                b.style.borderColor = 'var(--border)';
+                b.style.background = 'var(--bg-card)';
+            });
+            btn.style.borderColor = 'var(--accent)';
+            btn.style.background = 'rgba(124,92,255,0.12)';
+            cfOpenSeatModal(s);
+        };
+        const fmt = document.createElement('div');
+        fmt.textContent = s.format;
+        fmt.style.cssText = 'font-size:0.7rem; color:var(--text-muted); text-align:center;';
+        wrap.appendChild(btn);
+        wrap.appendChild(fmt);
+        timesDiv.appendChild(wrap);
+    });
+}
+
+function cfOpenSeatModal(sessionData) {
+    cfSelectedSessionId = sessionData.id;
+    cfSelectedSeatId = null;
+    window.cfSelectedSeats = []; // массив выбранных мест
+    cfCurrentSessionData = sessionData;
+    cfCurrentSessionPrice = Number(sessionData.price || 0);
+    document.getElementById('cfBtnPay').disabled = true;
+    document.getElementById('cfBtnBook').disabled = true;
+    document.getElementById('cfSelectedSeatText').style.display = 'none';
+    document.getElementById('cfSelectedSeatText').textContent = '';
+    const cfMsgEl = document.getElementById('cfMsg');
+    if (cfMsgEl) cfMsgEl.style.display = 'none';
+    const promoSelect = document.getElementById('cfPromoSelect');
+    if (promoSelect) promoSelect.value = '';
+    const paymentMethod = document.getElementById('cfPaymentMethod');
+    if (paymentMethod) paymentMethod.value = '';
+    const finalPriceText = document.getElementById('cfFinalPriceText');
+    if (finalPriceText) finalPriceText.textContent = '';
+    cfUpdateTotalPrice();
+    document.getElementById('cfSeatMap').innerHTML = '<p style="color:var(--text-muted)">Загрузка...</p>';
+
+    const title = document.getElementById('cfTitle').textContent;
+    document.getElementById('cfSeatTitle').textContent = title;
+
+    // Формат даты дд.мм.гггг в чч:мм
+    const dateParts = sessionData.date ? sessionData.date.split('-').reverse().join('.') : '';
+    // A05-5 аудита: экранируем данные зала/времени/цены перед innerHTML.
+    document.getElementById('cfSeatInfo').innerHTML =
+        `<b>${escapeHtml(sessionData.hall_name)}</b><br>${escapeHtml(dateParts)} в ${escapeHtml(sessionData.time)}<br>Цена: <b style="color:var(--accent)">${escapeHtml(sessionData.price)} ₽</b>`;
+
+    document.getElementById('cfPickerModal').style.display = 'none';
+    document.getElementById('cfSeatModal').style.display = 'flex';
+
+    fetch(`/api/session_seats/${sessionData.id}`)
+    .then(r => r.json())
+    .then(data => {
+        const map = document.getElementById('cfSeatMap');
+        map.innerHTML = '';
+        const sortedRows = Object.keys(data.rows).map(Number).sort((a,b) => a-b);
+        sortedRows.forEach(rowNum => {
+            const rowDiv = document.createElement('div');
+            rowDiv.style.cssText = 'display:flex; gap:4px; align-items:center; width:100%;';
+            const lbl = document.createElement('span');
+            lbl.textContent = rowNum;
+            lbl.style.cssText = 'font-size:0.75rem; color:var(--text-muted); width:16px; text-align:right; flex-shrink:0;';
+            rowDiv.appendChild(lbl);
+            const seatsWrap = document.createElement('div');
+            seatsWrap.style.cssText = 'display:flex; gap:4px; flex:1; justify-content:center;';
+            data.rows[rowNum].forEach(seat => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = seat.num;
+                btn.style.cssText = 'width:28px; height:28px; font-size:0.7rem; border-radius:4px; border:1px solid var(--accent); cursor:pointer; background:var(--bg-card); color:var(--text);';
+                if (seat.booked) {
+                    btn.style.background = 'var(--border)';
+                    btn.style.borderColor = 'var(--border)';
+                    btn.style.color = 'var(--text-muted)';
+                    btn.style.cursor = 'not-allowed';
+                } else {
+                    btn.dataset.seatId = seat.id;
+                    btn.dataset.rowNum = rowNum;
+                    btn.dataset.seatNum = seat.num;
+                    btn.onclick = () => {
+                        const idx = window.cfSelectedSeats.findIndex(s => s.id === seat.id);
+                        if (idx === -1) {
+                            window.cfSelectedSeats.push({id: seat.id, row: rowNum, num: seat.num});
+                            btn.style.background = 'var(--accent)';
+                            btn.style.color = 'var(--bg)';
+                        } else {
+                            window.cfSelectedSeats.splice(idx, 1);
+                            btn.style.background = 'var(--bg-card)';
+                            btn.style.color = 'var(--text)';
+                        }
+                        const hasSeats = window.cfSelectedSeats.length > 0;
+                        document.getElementById('cfBtnPay').disabled = !hasSeats;
+                        document.getElementById('cfBtnBook').disabled = !hasSeats;
+                        if (hasSeats) {
+                            const txt = window.cfSelectedSeats.map(s => `Ряд ${s.row}, место ${s.num}`).join(' | ');
+                            document.getElementById('cfSelectedSeatText').textContent = txt;
+                            document.getElementById('cfSelectedSeatText').style.display = 'block';
+                        } else {
+                            document.getElementById('cfSelectedSeatText').style.display = 'none';
+                        }
+                        cfUpdateTotalPrice();
+                    };
+                }
+                seatsWrap.appendChild(btn);
+            });
+            rowDiv.appendChild(seatsWrap);
+            const lbl2 = document.createElement('span');
+            lbl2.textContent = rowNum;
+            lbl2.style.cssText = 'font-size:0.75rem; color:var(--text-muted); width:16px; flex-shrink:0;';
+            rowDiv.appendChild(lbl2);
+            map.appendChild(rowDiv);
+        });
+    });
+}
+
+function cfLoadSeats(sessionId) {
+    cfSelectedSessionId = sessionId;
+    cfSelectedSeatId = null;
+    document.getElementById('cfBtnPay').disabled = true;
+    document.getElementById('cfBtnBook').disabled = true;
+    document.getElementById('cfSeatInfo').textContent = '';
+    document.getElementById('cfSeatSection').style.display = 'block';
+    document.getElementById('cfSeatMap').innerHTML = '<p style="color:var(--text-muted)">Загрузка...</p>';
+
+    fetch(`/api/session_seats/${sessionId}`)
+    .then(r => r.json())
+    .then(data => {
+        const map = document.getElementById('cfSeatMap');
+        map.innerHTML = '';
+        const sortedRows = Object.keys(data.rows).map(Number).sort((a,b) => a-b);
+        sortedRows.forEach(rowNum => {
+            const rowDiv = document.createElement('div');
+            rowDiv.style.cssText = 'display:flex; gap:4px; align-items:center; width:100%;';
+            const lbl = document.createElement('span');
+            lbl.textContent = rowNum;
+            lbl.style.cssText = 'font-size:0.75rem; color:var(--text-muted); width:16px; text-align:right; flex-shrink:0;';
+            rowDiv.appendChild(lbl);
+            const seatsWrap = document.createElement('div');
+            seatsWrap.style.cssText = 'display:flex; gap:4px; flex:1; justify-content:center;';
+            data.rows[rowNum].forEach(seat => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = seat.num;
+                btn.style.cssText = `width:28px; height:28px; font-size:0.7rem; border-radius:4px; border:1px solid var(--accent); cursor:pointer; background:var(--bg-card); color:var(--text);`;
+                if (seat.booked) {
+                    btn.style.background = 'var(--border)';
+                    btn.style.borderColor = 'var(--border)';
+                    btn.style.color = 'var(--text-muted)';
+                    btn.style.cursor = 'not-allowed';
+                } else {
+                    btn.onclick = () => {
+                        document.querySelectorAll('#cfSeatMap button').forEach(b => {
+                            if (b.style.cursor !== 'not-allowed') {
+                                b.style.background = 'var(--bg-card)';
+                            }
+                        });
+                        btn.style.background = 'var(--accent)';
+                        cfSelectedSeatId = seat.id;
+                        document.getElementById('cfSeatInfo').textContent = `Ряд ${rowNum}, место ${seat.num}`;
+                        document.getElementById('cfBtnPay').disabled = false;
+                        document.getElementById('cfBtnBook').disabled = false;
+                    };
+                }
+                seatsWrap.appendChild(btn);
+            });
+            rowDiv.appendChild(seatsWrap);
+            const lbl2 = document.createElement('span');
+            lbl2.textContent = rowNum;
+            lbl2.style.cssText = 'font-size:0.75rem; color:var(--text-muted); width:16px; flex-shrink:0;';
+            rowDiv.appendChild(lbl2);
+            map.appendChild(rowDiv);
+        });
+    });
+}
+
+function cfApplyPromo() {
+    cfUpdateTotalPrice();
+}
+
+function cfUpdateTotalPrice() {
+    const priceText = document.getElementById('cfFinalPriceText');
+    if (!priceText) return;
+
+    const select = document.getElementById('cfPromoSelect');
+    const discount = select ? parseInt(select.options[select.selectedIndex]?.dataset.discount || '0', 10) : 0;
+    const basePrice = Number(window.cfCurrentSessionData?.price || cfCurrentSessionPrice || 0);
+    const seatCount = window.cfSelectedSeats ? window.cfSelectedSeats.length : 0;
+    const oneSeatPrice = Math.round(basePrice * (1 - discount / 100));
+    const totalPrice = oneSeatPrice * seatCount;
+
+    priceText.textContent = `${totalPrice} ₽`;
+    priceText.style.display = 'block';
+    priceText.style.color = totalPrice > 0 ? 'var(--accent)' : 'var(--text-muted)';
+}
+
+function cfConfirm(action) {
+    if (!cfIsLoggedIn) return;
+    if (!window.cfSelectedSeats || window.cfSelectedSeats.length === 0 || !cfSelectedSessionId) return;
+
+    const msg = document.getElementById('cfMsg');
+    const paymentMethod = document.getElementById('cfPaymentMethod');
+    const payBtn = document.getElementById('cfBtnPay');
+    const bookBtn = document.getElementById('cfBtnBook');
+    const oldPayText = payBtn ? payBtn.textContent : '';
+    const oldBookText = bookBtn ? bookBtn.textContent : '';
+
+    function showCfMessage(text, color) {
+        if (!msg) return;
+        msg.textContent = text;
+        msg.style.color = color;
+        msg.style.display = 'block';
+    }
+
+    function setCfSeatsLocked(locked) {
+        document.querySelectorAll('#cfSeatMap button').forEach(seatBtn => {
+            seatBtn.disabled = locked;
+            if (locked) {
+                seatBtn.style.opacity = '0.65';
+                seatBtn.style.pointerEvents = 'none';
+            } else {
+                seatBtn.style.opacity = '';
+                seatBtn.style.pointerEvents = '';
+            }
+        });
+    }
+
+    function restoreCfButtons() {
+        if (payBtn) {
+            payBtn.disabled = false;
+            payBtn.textContent = oldPayText || 'Купить билет';
+        }
+        if (bookBtn) {
+            bookBtn.disabled = false;
+            bookBtn.textContent = oldBookText || 'Забронировать';
+        }
+        setCfSeatsLocked(false);
+        cfUpdatePayButtons();
+    }
+
+    if (action === 'pay' && paymentMethod && !paymentMethod.value) {
+        showCfMessage('Выберите способ оплаты', 'var(--danger)');
+        return;
+    }
+
+    if (payBtn) payBtn.disabled = true;
+    if (bookBtn) bookBtn.disabled = true;
+    setCfSeatsLocked(true);
+    if (action === 'pay' && payBtn) payBtn.textContent = 'Отправка билетов...';
+    if (action === 'book' && bookBtn) bookBtn.textContent = 'Бронирование...';
+    if (msg) msg.style.display = 'none';
+
+    const fd = new FormData();
+    fd.append('session_id', cfSelectedSessionId);
+    fd.append('action', action);
+    const promoSelect = document.getElementById('cfPromoSelect');
+    if (promoSelect) fd.append('promo_id', promoSelect.value);
+    if (paymentMethod) fd.append('payment_method', paymentMethod.value);
+    window.cfSelectedSeats.forEach(s => fd.append('seat_ids', s.id));
+
+    fetch('/client/book', { method: 'POST', body: fd })
+    .then(async r => {
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || 'Ошибка');
+        return data;
+    })
+    .then(data => {
+        showCfMessage(
+            action === 'pay' ? 'Билеты оплачены и отправлены на вашу почту' : (data.message || 'Места забронированы'),
+            'var(--success)'
+        );
+
+        if (action === 'pay') {
+            setTimeout(() => {
+                const seatModal = document.getElementById('cfSeatModal');
+                if (seatModal) seatModal.style.display = 'none';
+            }, 900);
+        }
+    })
+    .catch(err => {
+        showCfMessage(err.message || 'Ошибка', 'var(--danger)');
+        restoreCfButtons();
+    });
+}
+
+function cfClosePickerModal(e) {
+    if (!e || e.target === document.getElementById('cfPickerModal'))
+        document.getElementById('cfPickerModal').style.display = 'none';
+}
+
+function cfCloseSeatModal(e) {
+    if (!e || e.target === document.getElementById('cfSeatModal'))
+        document.getElementById('cfSeatModal').style.display = 'none';
+}
+
+function closeClientFilmModal(e) {
+    if (!e || e.target === document.getElementById('clientFilmModal')) {
+        document.getElementById('clientFilmModal').style.display = 'none';
+    }
+}
+</script>
+
+<script>
+
+function filterFilms() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const genre = document.getElementById('genreSelect').value;
+    const sort = document.getElementById('sortSelect').value;
+    const grid = document.getElementById('filmsGrid');
+    const cards = Array.from(grid.querySelectorAll('.film-sell-card'));
+
+    let visible = cards.filter(card => {
+        const matchTitle = card.dataset.title.includes(q);
+        const matchGenre = !genre || card.dataset.genre === genre;
+        const show = matchTitle && matchGenre;
+        card.style.display = show ? '' : 'none';
+        return show;
+    });
+
+    // Сортировка
+    visible.sort((a, b) => {
+        if (sort === 'popular') {
+            return parseInt(b.dataset.tickets) - parseInt(a.dataset.tickets);
+        } else if (sort === 'soon') {
+            return a.dataset.next.localeCompare(b.dataset.next);
+        } else {
+            return a.dataset.title.localeCompare(b.dataset.title);
+        }
+    });
+
+    // Перестраиваем DOM
+    visible.forEach(card => grid.appendChild(card));
+
+    document.getElementById('noResults').style.display = visible.length === 0 ? 'block' : 'none';
+}
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('genreSelect').value = '';
+    document.getElementById('sortSelect').value = 'title';
+    filterFilms();
+}
+
+function cfApplyPromo() {
+    cfUpdateTotalPrice();
+}
+</script>
+{% endblock %}

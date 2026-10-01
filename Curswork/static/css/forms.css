@@ -1,0 +1,238 @@
+/* ─── ФОРМЫ ─── */
+.form-group {
+    margin-bottom: 1.1rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.03em;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 0.6rem 0.9rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    appearance: none;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+}
+
+.form-hint {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+}
+
+.form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    max-width: 600px;
+}
+
+/* ─── ПОЛЯ ВВОДА, ИКОНКА ПАРОЛЯ, ОШИБКИ СБОКУ ─── */
+.input-wrapper, .input-group {
+    position: relative;
+    width: 100%;
+    margin-bottom: 0;
+}
+
+/* Иконка внутри поля */
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    line-height: 1;
+    user-select: none;
+    z-index: 5;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: var(--accent);
+}
+
+/* Боковая ошибка */
+.side-error {
+    position: absolute;
+    /* Установи одинаковое значение для всех.
+       112% обычно хорошо подходит для этой ширины модалки */
+    left: 112% !important;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(224, 82, 82, 0.95);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    display: none;
+    z-index: 100;
+    box-shadow: var(--shadow);
+}
+
+.side-error::after {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    margin-top: -5px;
+    border: 5px solid transparent;
+    border-right-color: rgba(224, 82, 82, 0.95);
+}
+
+/* Адаптив для мобилок (чтобы ошибки не улетали за экран) */
+@media (max-width: 800px) {
+    .side-error {
+        position: static;
+        transform: none;
+        margin-top: 5px;
+        white-space: normal;
+        display: none; /* Будет включаться скриптом */
+    }
+    .side-error::after { display: none; }
+}
+
+/* ─── ФОРМЫ ВНУТРИ МОДАЛКИ ─── */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 0.6rem 0.9rem;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+.input-wrapper .form-input {
+    padding-right: 40px !important;
+}
+
+.full-width { width: 100%; }
+
+.input-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+input::-ms-reveal,
+input::-ms-clear,
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+    display: none !important;
+}
+
+/* Фиксируем положение кружка строго внутри инпута */
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    line-height: 1;
+    z-index: 10; /* Чтобы был поверх всего */
+    user-select: none;
+}
+
+.passwords-group .side-error.double-arrow {
+    left: 112% !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    margin-top: 0; /* Убираем возможные смещения */
+}
+
+/* Стилизация стрелки, чтобы она казалась выше/шире и указывала на оба поля */
+.side-error.double-arrow::after {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    margin-top: -6px;
+    border: 6px solid transparent;
+    border-right-color: rgba(224, 82, 82, 0.95);
+}
+
+.side-error.double-arrow::before {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    /* Высота 58px при gap 15px обычно идеально попадает в центры полей */
+    height: 58px;
+    width: 8px; /* Чуть сузили общую ширину конструкции */
+
+    /* Делаем линию жирнее (2px вместо 1.5px) */
+    border: 2px solid rgba(224, 82, 82, 0.95);
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+    margin-right: 12px; /* Отступ от плашки */
+}
+
+.modal__checkboxes .side-error {
+    left: 112% !important; /* Чтобы была на одной линии с остальными */
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* ─── КОМПАКТНЫЕ SELECT/INPUT В АДМИН-ТАБЛИЦАХ ─── */
+.form-select-sm {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: center;
+}
+
+input[type="date"].form-select-sm,
+input[type="time"].form-select-sm,
+input[type="number"].form-select-sm {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: center;
+}
